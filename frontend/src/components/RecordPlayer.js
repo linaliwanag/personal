@@ -19,6 +19,12 @@ const RecordPlayer = () => {
     const checkYouTubeAPI = setInterval(() => {
       if (window.YT && window.YT.Player && !ytPlayer) {
         clearInterval(checkYouTubeAPI);
+
+        if (ytPlayer) {
+          ytPlayer.destroy()
+          setYtPlayer(null)
+        }
+
         const player = new window.YT.Player("youtube-player", {
           events: {
             onReady: (event) => {
@@ -59,26 +65,6 @@ const RecordPlayer = () => {
     setIsPlaying(false); // Set to false initially, require manual play
   };
 
-  // const playVideo = () => {
-  //   if (ytPlayer.current && ytPlayer.current.playVideo) {
-  //     ytPlayer.current.playVideo();
-  //     setIsPlaying(true);
-  //     console.log("playing video")
-  //   } else {
-  //     console.error("YouTube player is not initialized yet.");
-  //   }
-  // };
-
-  // const pauseVideo = () => {
-  //   if (ytPlayer.current && ytPlayer.current.pauseVideo) {
-  //     ytPlayer.current.pauseVideo();
-  //     console.log("pausing video")
-  //     setIsPlaying(false);
-  //   } else {
-  //     console.error("YouTube player is not initialized yet.");
-  //   }
-  // };
-
   const togglePlayPause = () => {
     if (!ytPlayer) {
       console.warn("YouTube player is not initialized yet.");
@@ -110,9 +96,14 @@ const RecordPlayer = () => {
   };
 
   const ejectVinyl = () => {
-    stopVideo();
+    if (ytPlayer) {
+      ytPlayer.stopVideo();
+      ytPlayer.destroy(); // Destroy the player to reset state
+      setYtPlayer(null);
+    }
     setCurrentTrack(null);
     setCurrentTrackTitle(null);
+    setIsPlaying(false);
   };
 
   const [{ isOver }, drop] = useDrop(() => ({
@@ -140,7 +131,10 @@ const RecordPlayer = () => {
             frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
-            style={{ borderRadius: "12px", margin: "20px 0" }}
+            style={{
+              display: "none",
+              borderRadius: "12px", margin: "20px 0"
+            }}
           ></iframe>
           <div>
             <button onClick={togglePlayPause} style={{ marginRight: "10px", padding: "10px 20px", fontSize: "16px" }}>
