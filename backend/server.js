@@ -18,7 +18,7 @@ let refreshToken = null;
  * Step 1: Redirect user to Spotify authorization page
  */
 app.get('/login', (req, res) => {
-  const scope = "streaming user-read-playback-state user-modify-playback-state";
+  const scope = "streaming user-read-playback-state user-modify-playback-state user-read-currently-playing app-remote-control";
   const authUrl = `https://accounts.spotify.com/authorize?${querystring.stringify({
     client_id: CLIENT_ID,
     response_type: 'code',
@@ -27,6 +27,8 @@ app.get('/login', (req, res) => {
   })}`;
   res.redirect(authUrl);
 });
+
+
 
 /**
  * Step 2: Handle callback from Spotify and retrieve tokens
@@ -66,27 +68,34 @@ app.get('/callback', async (req, res) => {
  */
 app.get('/refresh_token', async (req, res) => {
   if (!refreshToken) {
+    console.error("🚨 No refresh token available!");
     return res.status(400).json({ error: "No refresh token available" });
   }
 
   try {
-    const response = await axios.post('https://accounts.spotify.com/api/token', querystring.stringify({
-      grant_type: 'refresh_token',
-      refresh_token: refreshToken
-    }), {
+    console.log("🔄 Refreshing access token...");
+
+    const response = await axios.post('https://accounts.spotify.com/api/token',
+      querystring.stringify({
+        grant_type: 'refresh_token',
+        refresh_token: refreshToken
+      }), {
       headers: {
         'Authorization': 'Basic ' + Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64'),
         'Content-Type': 'application/x-www-form-urlencoded'
       }
     });
 
+    console.log("✅ Token refreshed successfully!");
+
     accessToken = response.data.access_token;
     res.json({ access_token: accessToken });
   } catch (error) {
-    console.error('Error refreshing token:', error);
-    res.status(500).json({ error: 'Failed to refresh token' });
+    console.error("❌ Error refreshing token:", error.response ? error.response.data : error.message);
+    res.status(500).json({ error: "Failed to refresh token" });
   }
 });
+
 
 /**
  * Start Express server

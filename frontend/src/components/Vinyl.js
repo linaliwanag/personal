@@ -1,10 +1,10 @@
 import React from "react";
 import { useDrag } from "react-dnd";
 
-const Vinyl = ({ vinyl }) => {
+const Vinyl = ({ id, title, videoId }) => {
   const [{ isDragging }, drag] = useDrag(() => ({
     type: "VINYL",
-    item: { id: vinyl.id, title: vinyl.title, embedUrl: vinyl.embedUrl },
+    item: { videoId, title },
     collect: (monitor) => ({
       isDragging: !!monitor.isDragging(),
     }),
@@ -14,21 +14,19 @@ const Vinyl = ({ vinyl }) => {
     <div
       ref={drag}
       style={{
-        opacity: isDragging ? 0.5 : 1,
-        cursor: "grab",
-        padding: "10px",
-        border: "1px solid black",
-        borderRadius: "50%",
         width: "100px",
         height: "100px",
-        background: "black",
+        borderRadius: "50%",
+        backgroundColor: isDragging ? "darkgray" : "black",
+        color: "white",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        color: "white",
+        margin: "10px",
+        cursor: "grab",
       }}
     >
-      {vinyl.title}
+      {title}
     </div>
   );
 };
