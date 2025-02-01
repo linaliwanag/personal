@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useDrag } from "react-dnd";
 
 const Vinyl = ({ id, title, videoId }) => {
@@ -17,7 +17,7 @@ const Vinyl = ({ id, title, videoId }) => {
         width: "100px",
         height: "100px",
         borderRadius: "50%",
-        backgroundColor: isDragging ? "darkgray" : "black",
+        backgroundColor: "black",
         color: "white",
         display: "flex",
         alignItems: "center",

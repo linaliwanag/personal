@@ -2,15 +2,22 @@ import React, { useState, useEffect } from "react";
 import { useDrop } from "react-dnd";
 import "./RecordPlayer.css";
 
+import Content from "./Content";
+
 const RecordPlayer = () => {
   const [currentTrack, setCurrentTrack] = useState(null);
   const [currentTrackTitle, setCurrentTrackTitle] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [rotationDegrees, setRotationDegrees] = useState(0);
   const [ytPlayer, setYtPlayer] = useState(null);
+  const [resetColors, setResetColors] = useState(false); // not actually using rn
+  const [trackProgress, setTrackProgress] = useState(0);
+  const [nowPlaying, setNowPlaying] = useState("No track selected")
+  let animationFrameRef = null;
 
+  // youtube handling
   useEffect(() => {
-    if (!currentTrack) return; // Only trigger when embed appears
+    if (!currentTrack) return;
 
     const tag = document.createElement("script");
     tag.src = "https://www.youtube.com/iframe_api";
@@ -40,9 +47,9 @@ const RecordPlayer = () => {
     }, 500);
 
     return () => clearInterval(checkYouTubeAPI);
-  }, [currentTrack]); // Trigger only when a track is set
+  }, [currentTrack]);
 
-
+  // animation handling
   useEffect(() => {
     let animationFrame;
     const updateRotation = () => {
@@ -57,11 +64,42 @@ const RecordPlayer = () => {
     return () => cancelAnimationFrame(animationFrame);
   }, [isPlaying]);
 
+  // progress handling
+  useEffect(() => {
+    if (!ytPlayer) return;
+
+    const updateProgress = () => {
+      if (ytPlayer && ytPlayer.getCurrentTime && ytPlayer.getDuration) {
+        const currentTime = ytPlayer.getCurrentTime();
+        const duration = ytPlayer.getDuration();
+        if (duration > 0) {
+          setTrackProgress((currentTime / duration) * 100);
+          if (currentTime >= duration) {
+            stopVideo();
+          }
+        }
+      }
+      requestAnimationFrame(updateProgress);
+    };
+
+    if (isPlaying) {
+      updateProgress();
+    }
+
+    return () => cancelAnimationFrame(updateProgress);
+  }, [isPlaying, ytPlayer]);
+
   const handleTrackDrop = (videoId, title) => {
     setCurrentTrack(`https://www.youtube.com/embed/${videoId}?enablejsapi=1`);
     setCurrentTrackTitle(title);
-    console.log("track dropped")
-    setIsPlaying(false); // Set to false initially, require manual play
+    setNowPlaying(() => {
+      if (title === "About") return `"From the Start" by Laufey`
+      if (title === "Projects") return `"the perfect pair" by beabadoobee`
+      if (title === "Contact") return `"Love like Before" by Rebby Han`
+    })
+    setIsPlaying(false);
+    setResetColors(false);
+    setTrackProgress(0)
   };
 
   const togglePlayPause = () => {
@@ -85,12 +123,11 @@ const RecordPlayer = () => {
     });
   };
 
-
   const stopVideo = () => {
     if (ytPlayer) {
-      // ytPlayer.seekTo(0, false);
       ytPlayer.stopVideo();
       setRotationDegrees(0);
+      setTrackProgress(0)
       setIsPlaying(false);
     }
   };
@@ -98,12 +135,14 @@ const RecordPlayer = () => {
   const ejectVinyl = () => {
     if (ytPlayer) {
       ytPlayer.stopVideo();
-      ytPlayer.destroy(); // Destroy the player to reset state
+      ytPlayer.destroy();
       setYtPlayer(null);
     }
     setCurrentTrack(null);
     setCurrentTrackTitle(null);
     setIsPlaying(false);
+    setResetColors(true);
+    setTrackProgress(0)
   };
 
   const [{ isOver }, drop] = useDrop(() => ({
@@ -111,6 +150,8 @@ const RecordPlayer = () => {
     drop: (item) => handleTrackDrop(item.videoId, item.title),
     collect: (monitor) => ({ isOver: !!monitor.isOver() }),
   }));
+
+  // now playing handling
 
   return (
     <div style={{ textAlign: "center", marginTop: "20px", display: "flex", flexDirection: "column", alignItems: "center", minHeight: "250px" }}>
@@ -137,16 +178,20 @@ const RecordPlayer = () => {
             }}
           ></iframe>
           <div>
-            <button onClick={togglePlayPause} style={{ marginRight: "10px", padding: "10px 20px", fontSize: "16px" }}>
-              {isPlaying ? "Pause" : "Play"}
-            </button>
-            <button onClick={stopVideo} style={{ marginRight: "10px", padding: "10px 20px", fontSize: "16px" }}>
-              Stop
-            </button>
-            <button onClick={ejectVinyl} style={{ padding: "10px 20px", fontSize: "16px" }}>Eject</button>
+            <button onClick={togglePlayPause}>{isPlaying ? "Pause" : "Play"}</button>
+            <button onClick={stopVideo}>Stop</button>
+            <button onClick={ejectVinyl}>Eject</button>
+          </div>
+          <div className="now-playing">
+            <p>Now Playing: {nowPlaying}</p>
+            <div className="progress-bar">
+              <div className="progress" style={{ width: `${trackProgress}%`, backgroundColor: "white" }}></div>
+            </div>
           </div>
         </div>
       )}
+
+      <Content trackTitle={currentTrackTitle} />
     </div>
   );
 };

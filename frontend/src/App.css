@@ -1,4 +1,25 @@
+/* Ensure entire page takes full height */
+html,
+body {
+  height: 100%;
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #111;
+  /* Optional */
+  color: white;
+  /* Optional */
+}
+
+/* Center the App component */
 .App {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  width: 100%;
   text-align: center;
 }
 
@@ -32,6 +53,7 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
