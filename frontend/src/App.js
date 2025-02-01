@@ -15,12 +15,12 @@ const App = () => {
     <DndProvider backend={HTML5Backend}>
       <div style={{ textAlign: "center", padding: "20px" }}>
         <h1>Drag and Drop a Record to Learn More About Me!</h1>
-        <RecordPlayer />
         <div style={{ display: "flex", justifyContent: "center", marginTop: "20px" }}>
           {vinyls.map((vinyl) => (
             <Vinyl key={vinyl.id} id={vinyl.id} title={vinyl.title} videoId={vinyl.videoId} />
           ))}
         </div>
+        <RecordPlayer />
       </div>
     </DndProvider>
   );
