@@ -1,4 +1,4 @@
-@keyframes spin {
+/* @keyframes spin {
     from {
         transform: rotate(0deg);
     }
@@ -6,11 +6,12 @@
     to {
         transform: rotate(360deg);
     }
-}
+} */
 
-.spinning .record {
+/* .spinning .record {
     animation: spin 2s linear infinite;
-}
+    animation-play-state: running
+} */
 
 .record-container {
     width: 200px;
@@ -20,8 +21,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.3s ease;
+    /* transition: transform 0.3s ease; */
     position: relative;
+    /* animation-play-state: paused */
 }
 
 .record {

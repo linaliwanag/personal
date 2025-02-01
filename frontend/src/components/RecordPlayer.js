@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useDrop } from "react-dnd";
 import "./RecordPlayer.css";
 
@@ -33,7 +33,6 @@ const RecordPlayer = () => {
             },
             onStateChange: (event) => {
               setIsPlaying(event.data === window.YT.PlayerState.PLAYING);
-              // setIsPlaying(prev => { return !prev });
             }
           }
         });
@@ -91,6 +90,7 @@ const RecordPlayer = () => {
     if (ytPlayer) {
       // ytPlayer.seekTo(0, false);
       ytPlayer.stopVideo();
+      setRotationDegrees(0);
       setIsPlaying(false);
     }
   };
@@ -116,7 +116,7 @@ const RecordPlayer = () => {
     <div style={{ textAlign: "center", marginTop: "20px", display: "flex", flexDirection: "column", alignItems: "center", minHeight: "250px" }}>
       <div ref={drop} className={`record-container ${isPlaying ? "spinning" : ""}`}>
         {currentTrack && (
-          <div className="record">{currentTrackTitle}</div>
+          <div className="record" style={{ transform: `rotate(${rotationDegrees}deg)` }}>{currentTrackTitle}</div>
         )}
         {!currentTrack && <div className="drop-text">Drop Vinyl Here</div>}
       </div>
