@@ -155,12 +155,52 @@ const RecordPlayer = () => {
 
   return (
     <div className="record-player-container" style={{ textAlign: "center", marginTop: "20px", display: "flex", flexDirection: "column", alignItems: "center", minHeight: "250px" }}>
-      <div ref={drop} className="record-player">
+      <div className={`record-player ${isPlaying ? "spinning" : ""}`} ref={drop}>
+        <svg
+          viewBox="0 0 300 300"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          {/* Turntable Base */}
+          <circle cx="150" cy="150" r="140" fill="#222" stroke="#111" strokeWidth="5" />
+
+          {/* Vinyl with grooves */}
+          <g>
+            <circle cx="150" cy="150" r="120" fill="black" stroke="gray" strokeWidth="2" />
+            {currentTrack &&
+              [110, 100, 90, 80, 70, 60, 50, 40, 30, 20].map((r, i) => (
+                <circle
+                  key={i}
+                  cx="150"
+                  cy="150"
+                  r={r}
+                  fill="none"
+                  stroke="#333"
+                  strokeWidth="2"
+                  strokeDasharray={r % 7 === 0 ? "3,5" : "5,3"} /* Creates small breaks */
+                />
+              ))}
+            <circle cx="150" cy="150" r="5" fill="white" />
+          </g>
+
+          {/* Tonearm - Positioned outside and moves toward the record */}
+          {/* <rect
+            x="270"
+            y="60"
+            width="12"
+            height="160"
+            fill="#666"
+            transform-origin="270px 60px"
+            transform={isPlaying ? `rotate(${15 + trackProgress * 0.2} 270 60)` : "rotate(-30 270 60)"}
+            style={{ transition: "transform 0.5s ease-in-out" }}
+          /> */}
+        </svg>
+      </div>
+      {/* <div className="record-player">
         {currentTrack && (
           <div className={`vinyl ${isPlaying ? "spinning" : ""}`}>{currentTrackTitle}</div>
         )}
         {!currentTrack && <div className="drop-text">Drop Vinyl Here</div>}
-      </div>
+      </div> */}
       {currentTrack && (
         <div className="controls">
           <iframe

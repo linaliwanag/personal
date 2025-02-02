@@ -6,9 +6,9 @@ import Vinyl from "./components/Vinyl";
 import './App.css'
 
 const vinyls = [
-  { id: 1, title: "About", videoId: "lSD_L-xic9o" },
-  { id: 2, title: "Projects", videoId: "3WpdCZC9q6w" },
-  { id: 3, title: "Contact", videoId: "eAbJyT0M8L8" }
+  { id: 1, title: "About", videoId: process.env.REACT_APP_VIDEO_1 },
+  { id: 2, title: "Projects", videoId: process.env.REACT_APP_VIDEO_2 },
+  { id: 3, title: "Contact", videoId: process.env.REACT_APP_VIDEO_3 }
 ];
 
 const App = () => {
@@ -16,9 +16,9 @@ const App = () => {
     <DndProvider backend={HTML5Backend}>
       <div style={{ textAlign: "center", padding: "20px" }}>
         {/* <h1>drag and drop a record onto the player to learn more about me!</h1> */}
-        <div style={{ display: "flex", justifyContent: "center", marginTop: "20px" }}>
+        <div className="vinyl-menu" style={{ display: "flex", justifyContent: "center", marginTop: "20px" }}>
           {vinyls.map((vinyl) => (
-            <Vinyl key={vinyl.id} id={vinyl.id} title={vinyl.title} videoId={vinyl.videoId} />
+            <Vinyl key={vinyl.id} id={vinyl.id} title={vinyl.title} videoId={vinyl.videoId} dragged />
           ))}
         </div>
         <RecordPlayer />
