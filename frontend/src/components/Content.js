@@ -3,6 +3,7 @@ import "./Content.css";
 
 const Content = ({ trackTitle }) => {
     // todo: update map structure. works for now but i don't like it
+    // todo: put data elsewhere lol
     const contentMap = {
         "About": {
             title: trackTitle,
@@ -10,7 +11,7 @@ const Content = ({ trackTitle }) => {
         },
         "Projects": {
             title: trackTitle,
-            text: "This is where my projects will be (when I make more of them 😊)!",
+            text: "This is where you can find links to some of my personal projects (when I make more of them 😊)!",
         },
         "Contact": { // todo: add hyperlinks for these
             title: trackTitle,
@@ -19,8 +20,8 @@ const Content = ({ trackTitle }) => {
     };
 
     const content = contentMap[trackTitle] || {
-        title: "Welcome!",
-        text: "Drop a record to learn more about me!",
+        title: "hi i'm paulina!",
+        text: "drop a record to learn more about me!",
     };
 
     return (
