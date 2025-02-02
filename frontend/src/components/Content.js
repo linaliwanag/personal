@@ -12,9 +12,9 @@ const Content = ({ trackTitle }) => {
             title: trackTitle,
             text: "This is where my projects will be (when I make more of them 😊)!",
         },
-        "Contact": {
+        "Contact": { // todo: add hyperlinks for these
             title: trackTitle,
-            text: "Here are a few ways to get in touch with me! My preferred method of contact is via email :)",
+            text: "Here are a few ways to get in touch with me! You can find me on LinkedIn at https://www.linkedin.com/in/paulina-liwanag/ or email me at liwanag.paulina@gmail.com",
         },
     };
 

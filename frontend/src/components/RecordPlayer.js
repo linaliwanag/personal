@@ -154,15 +154,15 @@ const RecordPlayer = () => {
   // now playing handling
 
   return (
-    <div style={{ textAlign: "center", marginTop: "20px", display: "flex", flexDirection: "column", alignItems: "center", minHeight: "250px" }}>
-      <div ref={drop} className={`record-container ${isPlaying ? "spinning" : ""}`}>
+    <div className="record-player-container" style={{ textAlign: "center", marginTop: "20px", display: "flex", flexDirection: "column", alignItems: "center", minHeight: "250px" }}>
+      <div ref={drop} className="record-player">
         {currentTrack && (
-          <div className="record" style={{ transform: `rotate(${rotationDegrees}deg)` }}>{currentTrackTitle}</div>
+          <div className={`vinyl ${isPlaying ? "spinning" : ""}`}>{currentTrackTitle}</div>
         )}
         {!currentTrack && <div className="drop-text">Drop Vinyl Here</div>}
       </div>
       {currentTrack && (
-        <div>
+        <div className="controls">
           <iframe
             id="youtube-player"
             title="YouTube Player"
@@ -177,7 +177,7 @@ const RecordPlayer = () => {
               borderRadius: "12px", margin: "20px 0"
             }}
           ></iframe>
-          <div>
+          <div className="buttons">
             <button onClick={togglePlayPause}>{isPlaying ? "Pause" : "Play"}</button>
             <button onClick={stopVideo}>Stop</button>
             <button onClick={ejectVinyl}>Eject</button>
@@ -185,7 +185,7 @@ const RecordPlayer = () => {
           <div className="now-playing">
             <p>Now Playing: {nowPlaying}</p>
             <div className="progress-bar">
-              <div className="progress" style={{ width: `${trackProgress}%`, backgroundColor: "white" }}></div>
+              <div className="progress" style={{ width: `${trackProgress}%` }}></div>
             </div>
           </div>
         </div>
