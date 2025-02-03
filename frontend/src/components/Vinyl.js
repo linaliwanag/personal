@@ -1,10 +1,10 @@
 import React from "react";
 import { useDrag } from "react-dnd";
 
-const Vinyl = ({ title, videoId, onDoubleClick }) => {
+const Vinyl = ({ title, filePath }) => {
   const [{ isDragging }, drag] = useDrag(() => ({
     type: "VINYL",
-    item: { videoId, title },
+    item: { title, filePath },
     collect: (monitor) => ({
       isDragging: !!monitor.isDragging(),
     }),
@@ -13,7 +13,7 @@ const Vinyl = ({ title, videoId, onDoubleClick }) => {
   return (
     <div
       ref={drag}
-      onDoubleClick={() => onDoubleClick(videoId, title)} // Handle double-click
+      // onDoubleClick={() => onDoubleClick(videoId, title)} // Handle double-click
       style={{
         width: "100px",
         height: "100px",

@@ -6,9 +6,9 @@ import Vinyl from "./components/Vinyl";
 import './App.css'
 
 const vinyls = [
-  { id: 1, title: "About", videoId: process.env.REACT_APP_VIDEO_1 },
-  { id: 2, title: "Projects", videoId: process.env.REACT_APP_VIDEO_2 },
-  { id: 3, title: "Contact", videoId: process.env.REACT_APP_VIDEO_3 }
+  { id: 1, title: "About", filePath: "/assets/music/daises.mp3" },
+  { id: 2, title: "Projects", filePath: "/assets/music/can_i_call_this_bossa_nova.mp3" },
+  { id: 3, title: "Contact", filePath: "/assets/music/good_enough.mp3" }
 ];
 
 // todo: make usable on mobile browser**
@@ -26,7 +26,7 @@ const App = () => {
             <Vinyl
               key={index}
               title={vinyl.title}
-              videoId={vinyl.videoId}
+              filePath={vinyl.filePath}
             // onDoubleClick={(videoId, title) => handleTrackDrop(videoId, title)}
             />
           ))}
