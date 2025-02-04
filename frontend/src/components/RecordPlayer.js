@@ -42,7 +42,7 @@ const RecordPlayer = () => {
         if (currentTrackTitle === "Projects") return `track 2`
         if (currentTrackTitle === "Contact") return `track 3`
       })
-      
+
     } else {
       setNowPlaying("No track selected");
       setIsPlaying(false);

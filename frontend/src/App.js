@@ -6,7 +6,7 @@ import Vinyl from "./components/Vinyl";
 import './App.css'
 
 const vinyls = [
-  { id: 1, title: "About", filePath: "/assets/music/daises.mp3" },
+  { id: 1, title: "About", filePath: "/assets/music/daisies.mp3" },
   { id: 2, title: "Projects", filePath: "/assets/music/can_i_call_this_bossa_nova.mp3" },
   { id: 3, title: "Contact", filePath: "/assets/music/good_enough.mp3" }
 ];
