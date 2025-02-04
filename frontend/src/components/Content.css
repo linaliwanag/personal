@@ -1,32 +1,33 @@
- .content-box {
-     width: 100%;
-     max-width: 60%;
-     min-width: 60%;
-     /* background-color: rgba(255, 255, 255, 0.1);
-    color: white;
+.content-box {
     padding: 20px;
-    border-radius: 12px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
     text-align: center;
-    font-size: 16px;
-    font-weight: 400;
-    line-height: 1.5;
+    color: white;
+    max-width: 500px;
     margin: 20px auto;
-    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
-    backdrop-filter: blur(5px);
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease, height 0.3s ease; */
- }
-
- /* .content-box:hover {
-     transform: scale(1.02);
-     box-shadow: 0px 6px 15px rgba(0, 0, 0, 0.4);
-     border-color: rgba(255, 255, 255, 0.5);
- } */
-
- .content-box p {
-     margin: 0;
-     padding: 0;
-     word-wrap: break-word;
-     overflow-wrap: break-word;
-     white-space: normal;
- }
+  }
+  
+  .contact-container {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .contact-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .contact-item a {
+    display: flex;
+    align-items: center;
+  }
+  
+  .contact-item span {
+    font-size: 16px;
+  }
+  
