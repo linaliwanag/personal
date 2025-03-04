@@ -1,33 +1,108 @@
 .content-box {
-    padding: 20px;
-    background-color: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-    text-align: center;
-    color: white;
-    max-width: 500px;
-    margin: 20px auto;
+  padding: 25px;
+  background: rgba(20, 20, 20, 0.8);
+  border-radius: 15px;
+  text-align: center;
+  color: white;
+  max-width: 600px;
+  margin: 30px auto;
+  box-shadow: 
+    0 10px 30px rgba(0, 0, 0, 0.3),
+    inset 0 2px 10px rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  animation: fadeIn 0.5s ease-out;
+  transition: all 0.3s ease;
+}
+
+.content-box h2 {
+  font-size: 1.8rem;
+  margin-bottom: 15px;
+  background: linear-gradient(90deg, #00b881, #0088b8);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  display: inline-block;
+}
+
+.content-box p {
+  line-height: 1.6;
+  margin-bottom: 15px;
+  font-size: 1rem;
+}
+
+.content-box a {
+  color: #00b881;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.content-box a:hover {
+  color: #00d4a4;
+  text-shadow: 0 0 5px rgba(0, 212, 164, 0.5);
+}
+
+.content-box a:after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 2px;
+  bottom: -2px;
+  left: 0;
+  background: linear-gradient(90deg, #00b881, #0088b8);
+  transition: width 0.3s ease;
+}
+
+.content-box a:hover:after {
+  width: 100%;
+}
+
+.contact-container {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.contact-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: transform 0.2s ease;
+}
+
+.contact-item:hover {
+  transform: translateY(-2px);
+}
+
+.contact-item a {
+  display: flex;
+  align-items: center;
+  padding: 5px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.contact-item a:hover {
+  background: rgba(0, 184, 129, 0.2);
+  transform: scale(1.1);
+}
+
+.contact-item span {
+  font-size: 16px;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
   }
-  
-  .contact-container {
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
-  
-  .contact-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  
-  .contact-item a {
-    display: flex;
-    align-items: center;
-  }
-  
-  .contact-item span {
-    font-size: 16px;
-  }
+}
   

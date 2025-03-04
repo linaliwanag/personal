@@ -10,46 +10,47 @@ const RecordPlayer = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [trackProgress, setTrackProgress] = useState(0);
   const [nowPlaying, setNowPlaying] = useState("No track selected");
+  const [dropActive, setDropActive] = useState(false);
   const audioRef = useRef(null);
+  const animationRef = useRef(null);
 
   useEffect(() => {
     if (currentTrack) {
-      console.log("Setting new track:", currentTrack); // Debugging
       if (audioRef.current) {
         audioRef.current.pause();
       }
 
       const absolutePath = window.location.origin + currentTrack;
-      console.log("Resolved absolute path:", absolutePath); // Debugging
-
-      const newAudio = new Audio(absolutePath);  // Use absolute path
+      const newAudio = new Audio(absolutePath);
+      
       newAudio.onended = () => {
         setIsPlaying(false);
         setTrackProgress(0);
         setNowPlaying("No track selected");
-        setCurrentTrack(null);
       };
+      
       newAudio.onloadedmetadata = () => {
         newAudio.volume = 0;
-        fadeIn(newAudio, 0.1);
+        fadeIn(newAudio, 0.05);
         setIsPlaying(true);
       };
+      
       audioRef.current = newAudio;
 
-      // todo: cleanup
+      // Set track name based on title
       setNowPlaying(() => {
-        if (currentTrackTitle === "About") return `track 1`
-        if (currentTrackTitle === "Projects") return `track 2`
-        if (currentTrackTitle === "Contact") return `track 3`
-      })
+        if (currentTrackTitle === "About") return "About Me - Track 1";
+        if (currentTrackTitle === "Projects") return "My Projects - Track 2";
+        if (currentTrackTitle === "Contact") return "Contact Me - Track 3";
+        return "Unknown Track";
+      });
 
     } else {
       setNowPlaying("No track selected");
       setIsPlaying(false);
       setTrackProgress(0);
     }
-    console.log(`useEffect: current track is ${currentTrack} and isPlaying is ${isPlaying}`)
-  }, [currentTrack]);
+  }, [currentTrack, currentTrackTitle]);
 
   useEffect(() => {
     if (!audioRef.current || !audioRef.current.src) return;
@@ -57,30 +58,39 @@ const RecordPlayer = () => {
     const updateProgress = () => {
       if (audioRef.current) {
         setTrackProgress((audioRef.current.currentTime / audioRef.current.duration) * 100);
-        if (!audioRef.current.paused) requestAnimationFrame(updateProgress);
+        if (!audioRef.current.paused) {
+          animationRef.current = requestAnimationFrame(updateProgress);
+        }
       }
     };
 
     if (isPlaying) {
-      // console.log("Playing audio"); // Debugging
       audioRef.current.play().catch(error => console.error("Audio play failed:", error));
-      requestAnimationFrame(updateProgress);
+      animationRef.current = requestAnimationFrame(updateProgress);
     } else {
-      // console.log("Pausing audio"); // Debugging
       audioRef.current.pause();
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
     }
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
   }, [isPlaying]);
 
   const fadeIn = (audioElement, step) => {
     let volume = 0;
     const fadeInterval = setInterval(() => {
-      if (volume < 1) {
-        volume = Math.min(volume + step, 1);
+      if (volume < 0.8) {
+        volume = Math.min(volume + step, 0.8);
         audioElement.volume = volume;
       } else {
         clearInterval(fadeInterval);
       }
-    }, 200);
+    }, 100);
   };
 
   const fadeOut = (audioElement, step, callback) => {
@@ -93,21 +103,28 @@ const RecordPlayer = () => {
         clearInterval(fadeInterval);
         callback();
       }
-    }, 200);
+    }, 100);
   };
 
   const handleTrackDrop = (item) => {
-    console.log("Track dropped:", item); // Debugging
     const { filePath, title } = item;
     if (!filePath) {
       console.error("No filePath received! Check Vinyl component.");
       return;
     }
 
-    setCurrentTrack(filePath);
-    setCurrentTrackTitle(title);
-    setIsPlaying(false); // Ensure it doesn't auto-play after ejecting
-    setTrackProgress(0);
+    // First fade out current track if playing
+    if (audioRef.current && audioRef.current.src && !audioRef.current.paused) {
+      fadeOut(audioRef.current, 0.1, () => {
+        setCurrentTrack(filePath);
+        setCurrentTrackTitle(title);
+      });
+    } else {
+      setCurrentTrack(filePath);
+      setCurrentTrackTitle(title);
+    }
+    
+    setDropActive(false);
   };
 
   const togglePlayPause = () => {
@@ -120,23 +137,27 @@ const RecordPlayer = () => {
 
   const stopAudio = () => {
     if (audioRef.current) {
-      audioRef.current.currentTime = 0;
-      audioRef.current.pause();
-      setIsPlaying(false);
-      setTrackProgress(0);
+      fadeOut(audioRef.current, 0.1, () => {
+        audioRef.current.currentTime = 0;
+        audioRef.current.pause();
+        setIsPlaying(false);
+        setTrackProgress(0);
+      });
     }
   };
 
   const ejectVinyl = () => {
     if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.src = "";
-      audioRef.current.load();
-      setCurrentTrack(null);
-      setCurrentTrackTitle(null);
-      setIsPlaying(false);
-      setTrackProgress(0);
-      setNowPlaying("No track selected");
+      fadeOut(audioRef.current, 0.1, () => {
+        audioRef.current.pause();
+        audioRef.current.src = "";
+        audioRef.current.load();
+        setCurrentTrack(null);
+        setCurrentTrackTitle(null);
+        setIsPlaying(false);
+        setTrackProgress(0);
+        setNowPlaying("No track selected");
+      });
     }
   };
 
@@ -146,9 +167,26 @@ const RecordPlayer = () => {
     collect: (monitor) => ({ isOver: !!monitor.isOver() }),
   }));
 
+  // Add effect to handle drop zone active state
+  useEffect(() => {
+    setDropActive(isOver);
+  }, [isOver]);
+
+  // Format track time
+  const formatTime = (seconds) => {
+    if (!audioRef.current) return "0:00";
+    const totalSeconds = Math.floor(seconds * (audioRef.current.duration || 0) / 100);
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = Math.floor(totalSeconds % 60).toString().padStart(2, '0');
+    return `${mins}:${secs}`;
+  };
+
   return (
-    <div ref={drop} className="record-player-container" style={{ textAlign: "center", marginTop: "20px", display: "flex", flexDirection: "column", alignItems: "center", minHeight: "250px" }}>
-      <div className={`record-player ${isPlaying ? "spinning" : ""}`} >
+    <div 
+      ref={drop} 
+      className={`record-player-container ${dropActive ? 'drop-active' : ''}`}
+    >
+      <div className={`record-player ${isPlaying ? "spinning" : ""}`}>
         <svg
           viewBox="0 0 300 300"
           xmlns="http://www.w3.org/2000/svg"
@@ -172,21 +210,37 @@ const RecordPlayer = () => {
             <circle cx="150" cy="150" r="5" fill="white" />
           </g>
         </svg>
+        
+        {dropActive && (
+          <div className="drop-indicator">
+            <span>Drop Record Here</span>
+          </div>
+        )}
       </div>
-      {currentTrack && (
+      
+      {currentTrack ? (
         <div className="controls">
-          <audio style={{ display: "none" }} src="/assets/music/daises.mp3" controls></audio>
           <div className="buttons">
-            <button onClick={togglePlayPause}>{isPlaying ? "Pause" : "Play"}</button>
+            <button onClick={togglePlayPause} className={isPlaying ? "active" : ""}>
+              {isPlaying ? "Pause" : "Play"}
+            </button>
             <button onClick={stopAudio}>Stop</button>
             <button onClick={ejectVinyl}>Eject</button>
           </div>
           <div className="now-playing">
-            <p>Now Playing: {nowPlaying}</p>
+            <p>{nowPlaying}</p>
             <div className="progress-bar">
               <div className="progress" style={{ width: `${trackProgress}%` }}></div>
             </div>
+            <div className="time-display">
+              <span>{formatTime(trackProgress)}</span>
+              <span>{formatTime(100)}</span>
+            </div>
           </div>
+        </div>
+      ) : (
+        <div className="empty-message">
+          <p>Drag a record onto the player</p>
         </div>
       )}
 

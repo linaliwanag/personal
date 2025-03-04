@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import RecordPlayer from "./components/RecordPlayer";
@@ -14,23 +14,43 @@ const vinyls = [
 // todo: make usable on mobile browser**
 
 const App = () => {
+  const [isDragging, setIsDragging] = useState(false);
+
+  // Add some effects for dragging
+  const handleDragStart = () => {
+    setIsDragging(true);
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(false);
+  };
+
   return (
     <DndProvider backend={HTML5Backend}>
-      <div style={{ textAlign: "center", padding: "20px" }}>
-        {/* <h1>drag and drop a record onto the player to learn more about me!</h1> */}
-        <div className="vinyl-menu" style={{ display: "flex", justifyContent: "center", marginTop: "20px" }}>
-          {/**
-           * **todo: add double click functionality
-           */}
+      <div className="animated-background"></div>
+      <div className={`app-container ${isDragging ? 'dragging-active' : ''}`}>
+        <header>
+          <h1 className="main-title">Paulina Liwanag</h1>
+          <p className="subtitle">Drag a record onto the player to learn more about me</p>
+        </header>
+
+        <div className="vinyl-menu">
           {vinyls.map((vinyl, index) => (
-            <Vinyl
-              key={index}
-              title={vinyl.title}
-              filePath={vinyl.filePath}
-            // onDoubleClick={(videoId, title) => handleTrackDrop(videoId, title)}
-            />
+            <div 
+              key={index} 
+              className="vinyl-wrapper"
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            >
+              <Vinyl
+                title={vinyl.title}
+                filePath={vinyl.filePath}
+              />
+              <span className="vinyl-hint">{vinyl.title}</span>
+            </div>
           ))}
         </div>
+        
         <RecordPlayer />
       </div>
     </DndProvider>
