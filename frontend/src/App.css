@@ -105,6 +105,132 @@ header {
   }
 }
 
+/* View toggle button */
+.view-toggle {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 100;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 25px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.9rem;
+  backdrop-filter: blur(5px);
+  transition: all 0.3s ease;
+}
+
+.view-toggle:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+/* Mobile view styles */
+.mobile-view {
+  min-height: 100vh;
+  width: 100%;
+  padding: 80px 20px 40px;
+  overflow-y: auto;
+  position: relative;
+  z-index: 1;
+}
+
+.mobile-content {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.mobile-content header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.mobile-content .main-title {
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+}
+
+.mobile-content .subtitle {
+  font-size: 1.1rem;
+  opacity: 0.8;
+}
+
+/* Vinyl menu styling for mobile */
+.mobile-view .vinyl-menu {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 30px;
+  margin: 20px 0 40px 0;
+}
+
+.mobile-view .vinyl-wrapper {
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.mobile-view .vinyl-wrapper:active {
+  transform: scale(0.95);
+}
+
+.mobile-view .vinyl-hint {
+  margin-top: 10px;
+  font-size: 1rem;
+  opacity: 0.7;
+  transition: opacity 0.3s ease;
+}
+
+.mobile-view .vinyl-wrapper:hover .vinyl-hint {
+  opacity: 1;
+}
+
+/* Contact content in modal */
+.contact-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.contact-content .contact-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  transition: all 0.3s ease;
+  width: 100%;
+  max-width: 300px;
+}
+
+.contact-content .contact-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateX(5px);
+}
+
+.contact-content .contact-item a {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.contact-content .contact-item a:hover {
+  background: rgba(0, 184, 129, 0.2);
+  transform: scale(1.1);
+}
+
+.contact-content .contact-item span {
+  font-size: 1rem;
+  opacity: 0.9;
+}
+
 /* Responsive styles */
 @media (max-width: 768px) {
   .main-title {
@@ -118,6 +244,22 @@ header {
   .vinyl-menu {
     flex-direction: column;
     align-items: center;
+  }
+
+  .mobile-content .main-title {
+    font-size: 2rem;
+  }
+
+  .mobile-content .subtitle {
+    font-size: 1rem;
+  }
+
+  .mobile-view .vinyl-menu {
+    gap: 20px;
+  }
+
+  .mobile-view .vinyl-hint {
+    font-size: 0.9rem;
   }
 }
 

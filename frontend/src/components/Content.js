@@ -32,9 +32,11 @@ const Content = ({ trackTitle }) => {
             body: (
                 <div>
                     <p>
-                    Hi there! My name is Paulina Liwanag (“lih-wahn-uhg”) and I’m a software engineer. I currently work at JP Morgan Chase where my tasks are mainly in backend development. When I started programming in college, I preferred frontend/full-stack development, so I enjoy working on side projects where I can continue to hone my skills and really explore my creativity with that visual element. 
+                    Hi there! My name is Paulina Liwanag (“lee-wahn-uhg”) and I’m a software engineer. I currently work at JP Morgan Chase where my tasks are mainly in backend development. While I've appreciated the backend experience I've gained at JPMC, I prefer the frontend side of things. I'm either a really visual person, or I just like React more than Java ¯\_(ツ)_/¯
                     </p>
-                    <p>What you’re looking at now has been a lot of fun to make–I got a record player for my birthday last year and instantly got this idea; I’m happy to finally bring it to life. In my spare time, I like to make music, like what you're listening to right now!</p>
+                    <p>
+                    When I have the time (and the motivation!), I enjoy making things like this where I can continue to hone my skills and really explore my creativity. 
+                    </p>
                 </div>
             ),
         },

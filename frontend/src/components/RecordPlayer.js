@@ -34,6 +34,13 @@ const RecordPlayer = () => {
         fadeIn(newAudio, 0.05);
         setIsPlaying(true);
       };
+
+      // Add timeupdate event listener for progress bar
+      newAudio.ontimeupdate = () => {
+        if (newAudio.duration) {
+          setTrackProgress((newAudio.currentTime / newAudio.duration) * 100);
+        }
+      };
       
       audioRef.current = newAudio;
 
@@ -55,30 +62,11 @@ const RecordPlayer = () => {
   useEffect(() => {
     if (!audioRef.current || !audioRef.current.src) return;
 
-    const updateProgress = () => {
-      if (audioRef.current) {
-        setTrackProgress((audioRef.current.currentTime / audioRef.current.duration) * 100);
-        if (!audioRef.current.paused) {
-          animationRef.current = requestAnimationFrame(updateProgress);
-        }
-      }
-    };
-
     if (isPlaying) {
       audioRef.current.play().catch(error => console.error("Audio play failed:", error));
-      animationRef.current = requestAnimationFrame(updateProgress);
     } else {
       audioRef.current.pause();
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
     }
-
-    return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
-    };
   }, [isPlaying]);
 
   const fadeIn = (audioElement, step) => {
@@ -230,7 +218,7 @@ const RecordPlayer = () => {
           <div className="now-playing">
             <p>{nowPlaying}</p>
             <div className="progress-bar">
-              <div className="progress" style={{ width: `${trackProgress}%` }}></div>
+              <div className="progress" style={{ transform: `scaleX(${trackProgress / 100})` }}></div>
             </div>
             <div className="time-display">
               <span>{formatTime(trackProgress)}</span>

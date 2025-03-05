@@ -13,6 +13,7 @@
   backdrop-filter: blur(10px);
   animation: fadeIn 0.5s ease-out;
   transition: all 0.3s ease;
+  width: 90%;
 }
 
 .content-box h2 {
@@ -103,6 +104,53 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .content-box {
+    padding: 20px;
+    margin: 20px auto;
+    width: 95%;
+  }
+
+  .content-box h2 {
+    font-size: 1.5rem;
+    margin-bottom: 12px;
+  }
+
+  .content-box p {
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin-bottom: 12px;
+  }
+
+  .contact-item span {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .content-box {
+    padding: 15px;
+    margin: 15px auto;
+    width: 100%;
+  }
+
+  .content-box h2 {
+    font-size: 1.3rem;
+    margin-bottom: 10px;
+  }
+
+  .content-box p {
+    font-size: 0.85rem;
+    line-height: 1.4;
+    margin-bottom: 10px;
+  }
+
+  .contact-item span {
+    font-size: 13px;
   }
 }
   
