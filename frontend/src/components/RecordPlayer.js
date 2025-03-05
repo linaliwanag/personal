@@ -218,7 +218,7 @@ const RecordPlayer = () => {
           <div className="now-playing">
             <p>{nowPlaying}</p>
             <div className="progress-bar">
-              <div className="progress" style={{ width: `${trackProgress}%` }}></div>
+              <div className="progress" style={{ transform: `scaleX(${trackProgress / 100})` }}></div>
             </div>
             <div className="time-display">
               <span>{formatTime(trackProgress)}</span>
