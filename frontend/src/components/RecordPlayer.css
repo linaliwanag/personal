@@ -11,6 +11,8 @@
     transition: all 0.3s ease;
     padding: 20px;
     border-radius: 20px;
+    width: 100%;
+    max-width: 100%;
 }
 
 /* Drop active state */
@@ -229,4 +231,73 @@
     margin: 0;
     font-size: 0.9rem;
     opacity: 0.8;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+    .record-player {
+        width: 250px !important;
+        height: 250px !important;
+        margin: 1rem !important;
+    }
+    
+    .vinyl {
+        width: 150px !important;
+        height: 150px !important;
+    }
+    
+    .buttons {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px;
+    }
+    
+    .buttons button {
+        padding: 8px 16px !important;
+        font-size: 0.9rem !important;
+        min-width: 70px !important;
+    }
+    
+    .now-playing {
+        padding: 10px;
+    }
+    
+    .now-playing p {
+        font-size: 0.9rem;
+    }
+    
+    .time-display {
+        font-size: 0.7rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .record-player {
+        width: 200px !important;
+        height: 200px !important;
+        margin: 0.5rem !important;
+    }
+    
+    .vinyl {
+        width: 120px !important;
+        height: 120px !important;
+    }
+    
+    .buttons button {
+        padding: 6px 12px !important;
+        font-size: 0.8rem !important;
+        min-width: 60px !important;
+    }
+    
+    .now-playing {
+        padding: 8px;
+    }
+    
+    .now-playing p {
+        font-size: 0.8rem;
+    }
+    
+    .time-display {
+        font-size: 0.6rem;
+    }
 }
