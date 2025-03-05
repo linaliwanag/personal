@@ -1,13 +1,73 @@
+/* Import modern fonts */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+  padding: 0;
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  box-sizing: border-box;
+  background-color: #111;
+  color: white;
+  overflow-x: hidden;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
+}
+
+/* Add responsive breakpoints */
+@media (max-width: 768px) {
+  .record-player {
+    width: 250px !important;
+    height: 250px !important;
+  }
+  
+  .vinyl-record {
+    width: 100px !important;
+    height: 100px !important;
+  }
+  
+  .vinyl-label span {
+    font-size: 10px !important;
+  }
+  
+  .content-box {
+    max-width: 90% !important;
+    padding: 15px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .record-player {
+    width: 200px !important;
+    height: 200px !important;
+    margin: 1rem !important;
+  }
+  
+  .vinyl-menu {
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+  }
+  
+  .buttons button {
+    padding: 8px 16px !important;
+    font-size: 0.9rem !important;
+  }
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
 }
