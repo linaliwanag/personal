@@ -102,16 +102,26 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: rgba(0, 184, 129, 0.1);
-  padding: 8px 16px;
-  border-radius: 30px;
-  margin-top: 15px;
+  color: #00b881;
+  text-decoration: none;
   transition: all 0.3s ease;
+  margin-top: 15px;
+  font-size: 1rem;
+  padding: 4px;
 }
 
 .project-link:hover {
-  background: rgba(0, 184, 129, 0.2);
+  color: #00d4a4;
   transform: translateY(-2px);
+}
+
+.project-link box-icon {
+  transition: transform 0.3s ease;
+  margin-right: 4px;
+}
+
+.project-link:hover box-icon {
+  transform: translateX(2px);
 }
 
 .more-projects {
@@ -189,14 +199,28 @@
 
   .project-card {
     padding: 15px;
+    margin: 15px 0;
   }
 
   .project-card h3 {
     font-size: 1.2rem;
+    margin-bottom: 8px;
+  }
+
+  .project-features {
+    gap: 6px;
+    margin: 12px 0;
+    padding-left: 8px;
   }
 
   .project-features span {
-    font-size: 0.8rem;
+    font-size: 0.85rem;
+  }
+
+  .project-link {
+    padding: 6px 12px;
+    font-size: 0.9rem;
+    margin-top: 12px;
   }
 
   .contact-item span {
@@ -224,18 +248,73 @@
 
   .project-card {
     padding: 12px;
+    margin: 12px 0;
+    border-radius: 10px;
   }
 
   .project-card h3 {
     font-size: 1.1rem;
+    margin-bottom: 6px;
+  }
+
+  .project-features {
+    gap: 5px;
+    margin: 10px 0;
+    padding-left: 6px;
+  }
+
+  .project-features span {
+    font-size: 0.8rem;
+  }
+
+  .project-link {
+    padding: 5px 10px;
+    font-size: 0.85rem;
+    margin-top: 10px;
+    border-radius: 25px;
+  }
+
+  .more-projects {
+    font-size: 0.85rem;
+    margin-top: 15px;
+  }
+
+  .contact-item span {
+    font-size: 13px;
+  }
+}
+
+/* Add styles for very small screens */
+@media (max-width: 360px) {
+  .content-box {
+    padding: 12px;
+    margin: 12px auto;
+  }
+
+  .content-box h2 {
+    font-size: 1.2rem;
+  }
+
+  .content-box p {
+    font-size: 0.8rem;
+  }
+
+  .project-card {
+    padding: 10px;
+    margin: 10px 0;
+  }
+
+  .project-card h3 {
+    font-size: 1rem;
   }
 
   .project-features span {
     font-size: 0.75rem;
   }
 
-  .contact-item span {
-    font-size: 13px;
+  .project-link {
+    padding: 4px 8px;
+    font-size: 0.8rem;
   }
 }
   

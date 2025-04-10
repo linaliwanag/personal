@@ -10,7 +10,7 @@ const Content = ({ trackTitle }) => {
             body: (
                 <div>
                     <p>
-                        Here are some of my personal projects:
+                        Here are some of my projects!
                     </p>
                     <div className="project-card">
                         <h3>Music Collagerator</h3>

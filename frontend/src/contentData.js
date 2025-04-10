@@ -6,8 +6,24 @@ export const contentData = {
         body: (
             <div>
                 <p>
-                    This is where you can find links to some of my personal projects (when I make more of them 😊)!
+                    Here are some of my projects!
                 </p>
+                <div className="project-card">
+                    <h3>Music Collagerator</h3>
+                    <p>
+                        A Spotify collage generator that visualizes your listening history and allows you to create beautiful collages from your favorite artists and albums.
+                    </p>
+                    <div className="project-features">
+                        <span>• Visualize your top artists and tracks</span>
+                        <span>• Customize time periods (last month, 6 months, all time)</span>
+                        <span>• Choose from multiple grid layouts</span>
+                        <span>• Download and share your collages</span>
+                    </div>
+                    <a href="https://music-collagerator.vercel.app/" target="_blank" rel="noopener noreferrer" className="project-link">
+                            <box-icon name="link-external" color="#00b881"></box-icon>
+                            Visit Music Collagerator
+                        </a>
+                </div>
                 {/* <ul>
                     <li>
                         <a href="https://github.com/yourgithub" target="_blank" rel="noopener noreferrer">
