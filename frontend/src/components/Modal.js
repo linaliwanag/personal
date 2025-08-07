@@ -24,16 +24,15 @@ const Modal = ({ isOpen, onClose, title, children }) => {
   if (!isOpen && !isClosing) return null;
 
   return (
-    <div 
-      className={`modal-overlay ${isClosing ? 'closing' : ''}`} 
+    <div
+      className={`modal-overlay ${isClosing ? 'closing' : ''}`}
       onClick={handleClose}
     >
-      <div 
-        className={`modal-content ${isClosing ? 'closing' : ''}`} 
+      <div
+        className={`modal-content ${isClosing ? 'closing' : ''}`}
         onClick={e => e.stopPropagation()}
       >
         <button className="modal-close" onClick={handleClose}>×</button>
-        <h2>{title}</h2>
         <div className="modal-body">
           {children}
         </div>
