@@ -113,18 +113,14 @@ const Content = ({ trackTitle }) => {
     };
 
     return (
-        <div className="content-box">
+        <>
             {contentData[trackTitle] ? (
-                <>
+                <div className="content-box">
                     <h2>{contentData[trackTitle].title}</h2>
                     {contentData[trackTitle].body}
-                </>
-            ) : (
-                <div>
-                    {/* nothing here */}
                 </div>
-            )}
-        </div>
+            ) : null}
+        </>
     );
 };
 
