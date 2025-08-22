@@ -121,8 +121,7 @@ const Content = ({ trackTitle }) => {
                 </>
             ) : (
                 <div>
-                    <h2>hi i'm paulina!</h2>
-                    <p>drag a record onto the player to learn more about me!</p>
+                    {/* nothing here */}
                 </div>
             )}
         </div>

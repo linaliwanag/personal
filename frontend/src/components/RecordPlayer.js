@@ -22,13 +22,13 @@ const RecordPlayer = () => {
 
       const absolutePath = window.location.origin + currentTrack;
       const newAudio = new Audio(absolutePath);
-      
+
       newAudio.onended = () => {
         setIsPlaying(false);
         setTrackProgress(0);
         setNowPlaying("No track selected");
       };
-      
+
       newAudio.onloadedmetadata = () => {
         newAudio.volume = 0;
         fadeIn(newAudio, 0.05);
@@ -41,7 +41,7 @@ const RecordPlayer = () => {
           setTrackProgress((newAudio.currentTime / newAudio.duration) * 100);
         }
       };
-      
+
       audioRef.current = newAudio;
 
       // Set track name based on title
@@ -111,7 +111,7 @@ const RecordPlayer = () => {
       setCurrentTrack(filePath);
       setCurrentTrackTitle(title);
     }
-    
+
     setDropActive(false);
   };
 
@@ -170,8 +170,8 @@ const RecordPlayer = () => {
   };
 
   return (
-    <div 
-      ref={drop} 
+    <div
+      ref={drop}
       className={`record-player-container ${dropActive ? 'drop-active' : ''}`}
     >
       <div className={`record-player ${isPlaying ? "spinning" : ""}`}>
@@ -198,14 +198,14 @@ const RecordPlayer = () => {
             <circle cx="150" cy="150" r="5" fill="white" />
           </g>
         </svg>
-        
+
         {dropActive && (
           <div className="drop-indicator">
             <span>Drop Record Here</span>
           </div>
         )}
       </div>
-      
+
       {currentTrack ? (
         <div className="controls">
           <div className="buttons">
@@ -226,11 +226,7 @@ const RecordPlayer = () => {
             </div>
           </div>
         </div>
-      ) : (
-        <div className="empty-message">
-          <p>Drag a record onto the player</p>
-        </div>
-      )}
+      ) : null}
 
       <Content trackTitle={currentTrackTitle} />
     </div>

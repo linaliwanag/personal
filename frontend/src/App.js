@@ -68,7 +68,7 @@ const App = () => {
     <div className="mobile-view">
       <div className="mobile-content">
         <header>
-          <h1 className="main-title">Paulina Liwanag</h1>
+          <h1 className="main-title">Hi there, I'm Paulina!</h1>
           <p className="subtitle">Tap a record to learn more about me!</p>
           <p className="subtitle">Visit the desktop version for more features 😊✌️</p>
         </header>
@@ -103,7 +103,7 @@ const App = () => {
   const renderDesktopView = () => (
     <div className={`app-container ${isDragging ? 'dragging-active' : ''}`}>
       <header>
-        <h1 className="main-title">Paulina Liwanag</h1>
+        <h1 className="main-title">Hi there, I'm Paulina!</h1>
         <p className="subtitle">Drag a record onto the player to learn more about me!</p>
       </header>
 
