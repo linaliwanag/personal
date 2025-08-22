@@ -4,13 +4,24 @@ import "./RecordPlayer.css";
 
 import Content from "./Content";
 
-const RecordPlayer = () => {
+const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
   const [currentTrack, setCurrentTrack] = useState(null);
   const [currentTrackTitle, setCurrentTrackTitle] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [trackProgress, setTrackProgress] = useState(0);
   const [nowPlaying, setNowPlaying] = useState("No track selected");
   const [dropActive, setDropActive] = useState(false);
+  const [vinylOnPlayer, setVinylOnPlayer] = useState(null);
+
+  // Generate vinyl color based on title (same as Vinyl component)
+  const getVinylColor = (title) => {
+    switch (title) {
+      case "About": return "linear-gradient(145deg, #343465, #443499)";
+      case "Projects": return "linear-gradient(145deg, #653434, #994434)";
+      case "Contact": return "linear-gradient(145deg, #346534, #449934)";
+      default: return "linear-gradient(145deg, #444, #222)";
+    }
+  };
   const audioRef = useRef(null);
   const animationRef = useRef(null);
 
@@ -101,6 +112,10 @@ const RecordPlayer = () => {
       return;
     }
 
+    // Set the vinyl on the player
+    setVinylOnPlayer({ title, filePath });
+    onVinylChange({ title, filePath });
+
     // First fade out current track if playing
     if (audioRef.current && audioRef.current.src && !audioRef.current.paused) {
       fadeOut(audioRef.current, 0.1, () => {
@@ -142,6 +157,8 @@ const RecordPlayer = () => {
         audioRef.current.load();
         setCurrentTrack(null);
         setCurrentTrackTitle(null);
+        setVinylOnPlayer(null);
+        onVinylChange(null);
         setIsPlaying(false);
         setTrackProgress(0);
         setNowPlaying("No track selected");
@@ -198,6 +215,18 @@ const RecordPlayer = () => {
             <circle cx="150" cy="150" r="5" fill="white" />
           </g>
         </svg>
+
+        {/* Vinyl overlay on the player */}
+        {vinylOnPlayer && (
+          <div
+            className={`vinyl-on-player ${isPlaying ? "spinning" : ""}`}
+            style={{
+              background: getVinylColor(vinylOnPlayer.title)
+            }}
+          >
+            <div className="vinyl-grooves"></div>
+          </div>
+        )}
 
         {dropActive && (
           <div className="drop-indicator">

@@ -33,6 +33,7 @@ const App = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [showMobileView, setShowMobileView] = useState(false);
   const [selectedVinyl, setSelectedVinyl] = useState(null);
+  const [currentVinylOnPlayer, setCurrentVinylOnPlayer] = useState(null);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -118,13 +119,17 @@ const App = () => {
             <Vinyl
               title={vinyl.title}
               filePath={vinyl.filePath}
+              isOnPlayer={currentVinylOnPlayer?.title === vinyl.title}
             />
             <span className="vinyl-hint">{vinyl.title}</span>
           </div>
         ))}
       </div>
 
-      <RecordPlayer />
+      <RecordPlayer
+        onVinylChange={setCurrentVinylOnPlayer}
+        currentVinyl={currentVinylOnPlayer}
+      />
     </div>
   );
 
