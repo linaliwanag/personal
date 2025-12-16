@@ -81,7 +81,7 @@ const Content = ({ trackTitle }) => {
             body: (
                 <div>
                     <p>
-                        Hello! I'm Paulina Liwanag, a software engineer currently working at JPMorgan Chase with a focus on backend development. While I've gained valuable experience building backend systems, I have a strong interest in frontend development and enjoy working with technologies like React to create engaging, user-friendly interfaces.
+                        Hello! I'm Paulina Liwanag, a Software Engineer currently working at LogicGate with a focus on backend development. While I've gained valuable experience building backend systems, I have a strong interest in frontend development and enjoy working with technologies like React to create engaging, user-friendly interfaces.
                     </p>
                     <p>
                         In my free time, I enjoy building creative side projects like this one to sharpen my skills, experiment with new tools, and bring my ideas to life.
