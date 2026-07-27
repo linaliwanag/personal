@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useDrop } from "react-dnd";
+import { useDrag, useDrop } from "react-dnd";
 import { getVinylColor } from "../vinylColors";
 import "./RecordPlayer.css";
 
@@ -10,10 +10,13 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
   const [currentTrackTitle, setCurrentTrackTitle] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [trackProgress, setTrackProgress] = useState(0);
+  const [trackDuration, setTrackDuration] = useState(0);
   const [nowPlaying, setNowPlaying] = useState("No track selected");
   const [dropActive, setDropActive] = useState(false);
   const [vinylOnPlayer, setVinylOnPlayer] = useState(null);
+  const [isEjecting, setIsEjecting] = useState(false);
   const audioRef = useRef(null);
+  const fadeIntervalRef = useRef(null);
 
   useEffect(() => {
     if (currentTrack) {
@@ -32,6 +35,7 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
 
       newAudio.onloadedmetadata = () => {
         newAudio.volume = 0;
+        setTrackDuration(newAudio.duration);
         fadeIn(newAudio, 0.05);
         newAudio.play().catch(error => console.error("Audio play failed:", error));
         setIsPlaying(true);
@@ -58,6 +62,7 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
       setNowPlaying("No track selected");
       setIsPlaying(false);
       setTrackProgress(0);
+      setTrackDuration(0);
     }
   }, [currentTrack, currentTrackTitle]);
 
@@ -72,25 +77,30 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
   }, [isPlaying]);
 
   const fadeIn = (audioElement, step) => {
+    if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
     let volume = 0;
-    const fadeInterval = setInterval(() => {
+    audioElement.volume = 0;
+    fadeIntervalRef.current = setInterval(() => {
       if (volume < 0.8) {
         volume = Math.min(volume + step, 0.8);
         audioElement.volume = volume;
       } else {
-        clearInterval(fadeInterval);
+        clearInterval(fadeIntervalRef.current);
+        fadeIntervalRef.current = null;
       }
     }, 100);
   };
 
   const fadeOut = (audioElement, step, callback) => {
+    if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
     let volume = audioElement.volume;
-    const fadeInterval = setInterval(() => {
+    fadeIntervalRef.current = setInterval(() => {
       if (volume > 0) {
         volume = Math.max(volume - step, 0);
         audioElement.volume = volume;
       } else {
-        clearInterval(fadeInterval);
+        clearInterval(fadeIntervalRef.current);
+        fadeIntervalRef.current = null;
         callback();
       }
     }, 100);
@@ -141,18 +151,23 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
   };
 
   const ejectVinyl = () => {
+    if (!vinylOnPlayer) return;
     if (audioRef.current) {
       fadeOut(audioRef.current, 0.1, () => {
         audioRef.current.pause();
         audioRef.current.src = "";
         audioRef.current.load();
-        setCurrentTrack(null);
-        setCurrentTrackTitle(null);
-        setVinylOnPlayer(null);
-        onVinylChange(null);
         setIsPlaying(false);
-        setTrackProgress(0);
-        setNowPlaying("No track selected");
+        setIsEjecting(true);
+        setTimeout(() => {
+          setCurrentTrack(null);
+          setCurrentTrackTitle(null);
+          setVinylOnPlayer(null);
+          onVinylChange(null);
+          setTrackProgress(0);
+          setNowPlaying("No track selected");
+          setIsEjecting(false);
+        }, 500);
       });
     }
   };
@@ -163,6 +178,16 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
     collect: (monitor) => ({ isOver: !!monitor.isOver() }),
   }));
 
+  const [{ isDraggingOff }, dragOff] = useDrag(() => ({
+    type: "PLAYER_VINYL",
+    item: { type: "PLAYER_VINYL" },
+    canDrag: !!vinylOnPlayer,
+    end: () => {
+      ejectVinyl();
+    },
+    collect: (monitor) => ({ isDraggingOff: !!monitor.isDragging() }),
+  }), [vinylOnPlayer]);
+
   // Add effect to handle drop zone active state
   useEffect(() => {
     setDropActive(isOver);
@@ -170,8 +195,7 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
 
   // Format track time
   const formatTime = (seconds) => {
-    if (!audioRef.current) return "0:00";
-    const totalSeconds = Math.floor(seconds * (audioRef.current.duration || 0) / 100);
+    const totalSeconds = Math.floor(seconds * trackDuration / 100);
     const mins = Math.floor(totalSeconds / 60);
     const secs = Math.floor(totalSeconds % 60).toString().padStart(2, '0');
     return `${mins}:${secs}`;
@@ -210,7 +234,8 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
         {/* Vinyl overlay on the player */}
         {vinylOnPlayer && (
           <div
-            className={`vinyl-on-player ${isPlaying ? "spinning" : ""}`}
+            ref={dragOff}
+            className={`vinyl-on-player ${isPlaying && !isEjecting ? "spinning" : ""} ${isEjecting ? "ejecting" : ""} ${isDraggingOff ? "dragging-off" : ""}`}
             style={{
               background: getVinylColor(vinylOnPlayer.title)
             }}

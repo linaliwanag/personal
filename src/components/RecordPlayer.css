@@ -37,7 +37,6 @@
     margin: 2rem;
     border: 8px solid #333;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
-    overflow: hidden;
 }
 
 .record-player:hover {
@@ -100,6 +99,21 @@
     animation: vinylDrop 0.5s ease-out;
     z-index: 5;
     border: 1px solid rgba(255, 255, 255, 0.05);
+    cursor: grab;
+}
+
+.vinyl-on-player:active {
+    cursor: grabbing;
+}
+
+.vinyl-on-player.dragging-off {
+    opacity: 0.4;
+}
+
+.vinyl-on-player.ejecting {
+    transform: translateY(-320px) scale(0.35);
+    opacity: 0;
+    pointer-events: none;
 }
 
 .vinyl-on-player::after {
