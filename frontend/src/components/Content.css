@@ -2,7 +2,7 @@
   padding: 25px;
   background: rgba(20, 20, 20, 0.8);
   border-radius: 15px;
-  text-align: center;
+  text-align: left;
   color: white;
   max-width: 600px;
   margin: 30px auto;
@@ -19,11 +19,12 @@
 .content-box h2 {
   font-size: 1.8rem;
   margin-bottom: 15px;
+  text-align: center;
   background: linear-gradient(90deg, #00b881, #0088b8);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  display: inline-block;
+  display: block;
 }
 
 .content-box p {
@@ -59,43 +60,6 @@
   width: 100%;
 }
 
-.contact-container {
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 15px;
-}
-
-.contact-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  transition: transform 0.2s ease;
-}
-
-.contact-item:hover {
-  transform: translateY(-2px);
-}
-
-.contact-item a {
-  display: flex;
-  align-items: center;
-  padding: 5px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  transition: all 0.3s ease;
-}
-
-.contact-item a:hover {
-  background: rgba(0, 184, 129, 0.2);
-  transform: scale(1.1);
-}
-
-.contact-item span {
-  font-size: 16px;
-}
-
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -126,10 +90,6 @@
     line-height: 1.5;
     margin-bottom: 12px;
   }
-
-  .contact-item span {
-    font-size: 14px;
-  }
 }
 
 @media (max-width: 480px) {
@@ -149,10 +109,6 @@
     line-height: 1.4;
     margin-bottom: 10px;
   }
-
-  .contact-item span {
-    font-size: 13px;
-  }
 }
 
 .project-screenshot {
@@ -163,11 +119,11 @@
   margin-bottom: 0.75rem;
   border: 1px solid #333;
   transition: transform 0.3s ease-in-out;
+  transform-origin: center;
 }
 
 .project-screenshot:hover {
-  transform: scale(2);
-  /* You can use 1.05 or 1.1 based on taste */
+  transform: scale(1.08);
   cursor: pointer;
   z-index: 10;
   position: relative;
