@@ -15,6 +15,8 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
   const [dropActive, setDropActive] = useState(false);
   const [vinylOnPlayer, setVinylOnPlayer] = useState(null);
   const [isEjecting, setIsEjecting] = useState(false);
+  const [snapOffset, setSnapOffset] = useState(null);
+  const [snapInstant, setSnapInstant] = useState(false);
   const audioRef = useRef(null);
   const fadeIntervalRef = useRef(null);
 
@@ -150,15 +152,31 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
     }
   };
 
-  const ejectVinyl = () => {
+  const ejectVinyl = (dragEndOffset = null) => {
     if (!vinylOnPlayer) return;
+
+    if (dragEndOffset) {
+      // Snap back to original position immediately from wherever it was dropped,
+      // decoupled from the audio fade timing below.
+      setSnapOffset(dragEndOffset);
+      setSnapInstant(true);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setSnapInstant(false);
+          setSnapOffset({ x: 0, y: 0 });
+        });
+      });
+    }
+
     if (audioRef.current) {
       fadeOut(audioRef.current, 0.1, () => {
         audioRef.current.pause();
         audioRef.current.src = "";
         audioRef.current.load();
         setIsPlaying(false);
-        setIsEjecting(true);
+        if (!dragEndOffset) {
+          setIsEjecting(true);
+        }
         setTimeout(() => {
           setCurrentTrack(null);
           setCurrentTrackTitle(null);
@@ -167,6 +185,8 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
           setTrackProgress(0);
           setNowPlaying("No track selected");
           setIsEjecting(false);
+          setSnapOffset(null);
+          setSnapInstant(false);
         }, 500);
       });
     }
@@ -182,8 +202,13 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
     type: "PLAYER_VINYL",
     item: { type: "PLAYER_VINYL" },
     canDrag: !!vinylOnPlayer,
-    end: () => {
-      ejectVinyl();
+    end: (item, monitor) => {
+      const dropPoint = monitor.getClientOffset();
+      const startPoint = monitor.getInitialClientOffset();
+      const offset = (dropPoint && startPoint)
+        ? { x: dropPoint.x - startPoint.x, y: dropPoint.y - startPoint.y }
+        : { x: 0, y: 0 };
+      ejectVinyl(offset);
     },
     collect: (monitor) => ({ isDraggingOff: !!monitor.isDragging() }),
   }), [vinylOnPlayer]);
@@ -235,9 +260,14 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
         {vinylOnPlayer && (
           <div
             ref={dragOff}
-            className={`vinyl-on-player ${isPlaying && !isEjecting ? "spinning" : ""} ${isEjecting ? "ejecting" : ""} ${isDraggingOff ? "dragging-off" : ""}`}
+            className={`vinyl-on-player ${isPlaying && !isEjecting && !snapOffset ? "spinning" : ""} ${isEjecting ? "ejecting" : ""} ${isDraggingOff ? "dragging-off" : ""}`}
             style={{
-              background: getVinylColor(vinylOnPlayer.title)
+              background: getVinylColor(vinylOnPlayer.title),
+              ...(snapOffset ? {
+                transform: `translate(${snapOffset.x}px, ${snapOffset.y}px)`,
+                opacity: (snapOffset.x === 0 && snapOffset.y === 0) ? 0 : 0.4,
+                transition: snapInstant ? "none" : undefined,
+              } : {})
             }}
           >
             <div className="vinyl-grooves"></div>
@@ -258,7 +288,7 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
               {isPlaying ? "Pause" : "Play"}
             </button>
             <button onClick={stopAudio}>Stop</button>
-            <button onClick={ejectVinyl}>Eject</button>
+            <button onClick={() => ejectVinyl()}>Eject</button>
           </div>
           <div className="now-playing">
             <p>{nowPlaying}</p>
