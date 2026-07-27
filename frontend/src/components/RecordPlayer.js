@@ -23,7 +23,6 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
     }
   };
   const audioRef = useRef(null);
-  const animationRef = useRef(null);
 
   useEffect(() => {
     if (currentTrack) {
