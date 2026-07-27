@@ -30,7 +30,7 @@ const vinylData = [
 const App = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [showMobileView, setShowMobileView] = useState(false);
+  const [showMobileView, setShowMobileView] = useState(() => window.innerWidth <= 768);
   const [selectedVinyl, setSelectedVinyl] = useState(null);
   const [currentVinylOnPlayer, setCurrentVinylOnPlayer] = useState(null);
 

@@ -187,52 +187,12 @@ header {
   opacity: 1;
 }
 
-/* Contact content in modal */
-.contact-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-}
-
-.contact-content .contact-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 10px;
-  transition: all 0.3s ease;
-  width: 100%;
-  max-width: 300px;
-}
-
-.contact-content .contact-item:hover {
-  background: rgba(255, 255, 255, 0.1);
-  transform: translateX(5px);
-}
-
-.contact-content .contact-item a {
-  display: flex;
-  align-items: center;
-  padding: 8px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  transition: all 0.3s ease;
-}
-
-.contact-content .contact-item a:hover {
-  background: rgba(0, 184, 129, 0.2);
-  transform: scale(1.1);
-}
-
-.contact-content .contact-item span {
-  font-size: 1rem;
-  opacity: 0.9;
-}
-
 /* Responsive styles */
 @media (max-width: 768px) {
+  .app-container {
+    padding-top: 80px;
+  }
+
   .main-title {
     font-size: 2rem;
   }
