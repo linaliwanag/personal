@@ -6,7 +6,6 @@ import RecordPlayer from "./components/RecordPlayer";
 import Vinyl from "./components/Vinyl";
 import Modal from "./components/Modal";
 import Content from "./components/Content";
-import 'boxicons';
 import './App.css'
 
 // Shared data structure for both mobile and desktop views

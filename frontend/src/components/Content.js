@@ -1,5 +1,7 @@
 import React from "react";
-import 'boxicons';
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faEnvelope } from "@fortawesome/free-regular-svg-icons";
+import { faLinkedin } from "@fortawesome/free-brands-svg-icons";
 import "./Content.css";
 
 const Content = ({ trackTitle }) => {
@@ -97,13 +99,13 @@ const Content = ({ trackTitle }) => {
                     <p>Feel free to reach out 😊</p>
                     <p style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                         <a href="mailto:liwanag.paulina@gmail.com">
-                            <box-icon name="envelope" color="#ffffff"></box-icon>
+                            <FontAwesomeIcon icon={faEnvelope} color="#ffffff" style={{ width: "24px", height: "24px" }} />
                         </a>
                         <span>liwanag.paulina@gmail.com</span>
                     </p>
                     <p style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                         <a href="https://www.linkedin.com/in/paulina-liwanag/" target="_blank" rel="noopener noreferrer">
-                            <box-icon name="linkedin-square" type="logo" color="#ffffff"></box-icon>
+                            <FontAwesomeIcon icon={faLinkedin} color="#ffffff" style={{ width: "24px", height: "24px" }} />
                         </a>
                         <span>paulina-liwanag</span>
                     </p>
