@@ -43,6 +43,7 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
       newAudio.onloadedmetadata = () => {
         newAudio.volume = 0;
         fadeIn(newAudio, 0.05);
+        newAudio.play().catch(error => console.error("Audio play failed:", error));
         setIsPlaying(true);
       };
 
