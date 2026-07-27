@@ -244,9 +244,9 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
           </div>
         )}
 
-        {dropActive && (
+        {(dropActive || isDraggingOff) && (
           <div className="drop-indicator">
-            <span>Drop Record Here</span>
+            <span>{isDraggingOff ? "Drop Anywhere to Eject" : "Drop Record Here"}</span>
           </div>
         )}
       </div>
