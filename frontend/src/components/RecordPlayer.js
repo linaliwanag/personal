@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useDrop } from "react-dnd";
+import { getVinylColor } from "../vinylColors";
 import "./RecordPlayer.css";
 
 import Content from "./Content";
@@ -12,16 +13,6 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
   const [nowPlaying, setNowPlaying] = useState("No track selected");
   const [dropActive, setDropActive] = useState(false);
   const [vinylOnPlayer, setVinylOnPlayer] = useState(null);
-
-  // Generate vinyl color based on title (same as Vinyl component)
-  const getVinylColor = (title) => {
-    switch (title) {
-      case "About": return "linear-gradient(145deg, #343465, #443499)";
-      case "Projects": return "linear-gradient(145deg, #653434, #994434)";
-      case "Contact": return "linear-gradient(145deg, #346534, #449934)";
-      default: return "linear-gradient(145deg, #444, #222)";
-    }
-  };
   const audioRef = useRef(null);
 
   useEffect(() => {
