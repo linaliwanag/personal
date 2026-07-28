@@ -26,46 +26,10 @@ code {
     monospace;
 }
 
-/* Add responsive breakpoints */
-@media (max-width: 768px) {
-  .record-player {
-    width: 250px !important;
-    height: 250px !important;
-  }
-  
-  .vinyl-record {
-    width: 100px !important;
-    height: 100px !important;
-  }
-  
-  .vinyl-label span {
-    font-size: 10px !important;
-  }
-  
-  .content-box {
-    max-width: 90% !important;
-    padding: 15px !important;
-  }
-}
-
-@media (max-width: 480px) {
-  .record-player {
-    width: 200px !important;
-    height: 200px !important;
-    margin: 1rem !important;
-  }
-  
-  .vinyl-menu {
-    flex-direction: row !important;
-    flex-wrap: wrap !important;
-    gap: 10px !important;
-  }
-  
-  .buttons button {
-    padding: 8px 16px !important;
-    font-size: 0.9rem !important;
-  }
-}
+/* Responsive rules live in the stylesheet of the component that owns the
+   element. They used to be duplicated here too, as !important overrides that
+   contradicted the component rules (and each other -- .vinyl-menu was told to
+   stack at 768px and to un-stack at 480px). */
 
 /* Smooth scrolling */
 html {

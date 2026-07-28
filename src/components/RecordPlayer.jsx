@@ -1,100 +1,59 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { useDrag, useDrop } from "react-dnd";
-import { getVinylColor } from "../vinylColors";
 import "./RecordPlayer.css";
 
 import Content from "./Content";
+import { isCoarsePointer } from "../pointer";
 
-// How long the record takes to travel back to its slot in the menu. The button
-// eject gets a little longer because it also plays the lift-off beat first.
+// How long the record takes to travel between its slot in the menu and the
+// platter. The button eject gets a little longer because it also plays the
+// lift-off beat first.
 const EJECT_FLIGHT_MS = 560;
 const DRAG_FLIGHT_MS = 420;
+const LOAD_FLIGHT_MS = 520;
 
-const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
-  const [currentTrack, setCurrentTrack] = useState(null);
-  const [currentTrackTitle, setCurrentTrackTitle] = useState(null);
+const RecordPlayer = ({ loaded, onLoad, onEjectComplete }) => {
+  const record = loaded?.record ?? null;
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [trackProgress, setTrackProgress] = useState(0);
   const [trackDuration, setTrackDuration] = useState(0);
-  const [nowPlaying, setNowPlaying] = useState("No track selected");
   const [dropActive, setDropActive] = useState(false);
-  const [vinylOnPlayer, setVinylOnPlayer] = useState(null);
   const [isReturning, setIsReturning] = useState(false);
   const [isEntering, setIsEntering] = useState(false);
+
   const audioRef = useRef(null);
   const fadeIntervalRef = useRef(null);
   const vinylElRef = useRef(null);
   const isReturningRef = useRef(false);
   const flightTimeoutRef = useRef(null);
+  const loadFlightTimeoutRef = useRef(null);
+  const scrollTimeoutRef = useRef(null);
+  const contentRef = useRef(null);
 
-  useEffect(() => {
-    if (currentTrack) {
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
-
-      const absolutePath = window.location.origin + currentTrack;
-      const newAudio = new Audio(absolutePath);
-
-      newAudio.onended = () => {
-        setIsPlaying(false);
-        setTrackProgress(0);
-        setNowPlaying("No track selected");
-      };
-
-      newAudio.onloadedmetadata = () => {
-        newAudio.volume = 0;
-        setTrackDuration(newAudio.duration);
-        fadeIn(newAudio, 0.05);
-        newAudio.play().catch(error => console.error("Audio play failed:", error));
-        setIsPlaying(true);
-      };
-
-      // Add timeupdate event listener for progress bar
-      newAudio.ontimeupdate = () => {
-        if (newAudio.duration) {
-          setTrackProgress((newAudio.currentTime / newAudio.duration) * 100);
+  // One <audio> element for the player's whole lifetime, rather than a fresh
+  // one per track. iOS grants permission to play to a *specific element* when
+  // the user gestures at it, and that permission then sticks for the session --
+  // so reusing the element is what makes later, deferred plays (the one behind
+  // a cross-fade, say) work at all.
+  const getAudio = () => {
+    if (!audioRef.current) {
+      const audio = new Audio();
+      audio.preload = "auto";
+      audio.onloadedmetadata = () => setTrackDuration(audio.duration || 0);
+      audio.ontimeupdate = () => {
+        if (audio.duration) {
+          setTrackProgress((audio.currentTime / audio.duration) * 100);
         }
       };
-
-      audioRef.current = newAudio;
-
-      // Set track name based on title
-      setNowPlaying(() => {
-        if (currentTrackTitle === "About") return "About Me - Track 1";
-        if (currentTrackTitle === "Projects") return "My Projects - Track 2";
-        if (currentTrackTitle === "Contact") return "Contact Me - Track 3";
-        return "Unknown Track";
-      });
-
-    } else {
-      setNowPlaying("No track selected");
-      setIsPlaying(false);
-      setTrackProgress(0);
-      setTrackDuration(0);
+      audio.onended = () => {
+        setIsPlaying(false);
+        setTrackProgress(0);
+      };
+      audioRef.current = audio;
     }
-  }, [currentTrack, currentTrackTitle]);
-
-  useEffect(() => {
-    if (!vinylOnPlayer) return;
-    // Scoped to its own class + timed removal (rather than left as a permanent
-    // property of .vinyl-on-player) so it can't restart later just because some
-    // other class (like .returning) toggles on the same element -- CSS animations
-    // take priority over transitions on the same property and will hijack them.
-    setIsEntering(true);
-    const timer = setTimeout(() => setIsEntering(false), 500);
-    return () => clearTimeout(timer);
-  }, [vinylOnPlayer]);
-
-  useEffect(() => {
-    if (!audioRef.current || !audioRef.current.src) return;
-
-    if (isPlaying) {
-      audioRef.current.play().catch(error => console.error("Audio play failed:", error));
-    } else {
-      audioRef.current.pause();
-    }
-  }, [isPlaying]);
+    return audioRef.current;
+  };
 
   const fadeIn = (audioElement, step) => {
     if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
@@ -126,33 +85,99 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
     }, 100);
   };
 
-  const handleTrackDrop = (item) => {
-    const { filePath, title } = item;
-    if (!filePath) {
-      console.error("No filePath received! Check Vinyl component.");
-      return;
-    }
+  // The first play() of the session has to happen synchronously inside the
+  // gesture that loaded the record, or iOS rejects it -- which is why this is
+  // called from a layout effect and not from a metadata/canplay callback. Once
+  // that first play has been granted, the element is unlocked and the fade-out
+  // path below (which resumes on a timer) is allowed too.
+  const startTrack = (rec) => {
+    const audio = getAudio();
 
-    // Set the vinyl on the player
-    setVinylOnPlayer({ title, filePath });
-    onVinylChange({ title, filePath });
+    const begin = () => {
+      audio.src = window.location.origin + rec.file;
+      audio.volume = 0;
+      setTrackProgress(0);
+      audio
+        .play()
+        .then(() => {
+          setIsPlaying(true);
+          fadeIn(audio, 0.05);
+        })
+        .catch((error) => {
+          setIsPlaying(false);
+          // AbortError just means this play() was superseded -- the reader
+          // tapped another record, or hit eject, before it got going. That's
+          // ordinary, not a failure. NotAllowedError means the browser refused
+          // autoplay; the record still loads and the Play button is sitting
+          // right there, so it recovers on its own.
+          if (error.name === "AbortError") return;
+          console.error("Audio play failed:", error);
+        });
+    };
 
-    // First fade out current track if playing
-    if (audioRef.current && audioRef.current.src && !audioRef.current.paused) {
-      fadeOut(audioRef.current, 0.1, () => {
-        setCurrentTrack(filePath);
-        setCurrentTrackTitle(title);
-      });
+    if (audio.src && !audio.paused) {
+      fadeOut(audio, 0.1, begin);
     } else {
-      setCurrentTrack(filePath);
-      setCurrentTrackTitle(title);
+      begin();
     }
-
-    setDropActive(false);
   };
 
+  // useLayoutEffect, not useEffect: React flushes discrete input events (click,
+  // touchend) synchronously, so a layout effect scheduled by one still runs
+  // inside the browser's user-activation window. A passive effect would land
+  // after it had expired and iOS would refuse to play.
+  useLayoutEffect(() => {
+    if (!loaded) return;
+
+    if (loaded.source === "tap" && loaded.fromRect) {
+      flyIn(loaded.fromRect);
+    } else {
+      // The drop path keeps the original "record lands on the platter" beat --
+      // it reads right when you've released the record over the player, where a
+      // flight from the menu would not.
+      setIsEntering(true);
+    }
+
+    startTrack(loaded.record);
+
+    const enterTimer = setTimeout(() => setIsEntering(false), 500);
+    // Touch only. On a phone the content sits far enough below the fold that
+    // nothing appears to have happened without this; on desktop it's already
+    // near the fold, and scrolling to it would shove the player -- the thing the
+    // reader just interacted with -- off the top of the screen.
+    //
+    // Held until after the flight rather than fired immediately: the flight path
+    // is measured in viewport coordinates, so scrolling mid-flight would make
+    // the record miss the platter it was aimed at.
+    if (isCoarsePointer) {
+      scrollTimeoutRef.current = setTimeout(() => {
+        contentRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }, LOAD_FLIGHT_MS + 80);
+    }
+
+    return () => {
+      clearTimeout(enterTimer);
+      clearTimeout(scrollTimeoutRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || !audio.src) return;
+
+    if (isPlaying) {
+      if (audio.paused) {
+        audio.play().catch((error) => console.error("Audio play failed:", error));
+      }
+    } else if (!audio.paused) {
+      audio.pause();
+    }
+  }, [isPlaying]);
+
   const togglePlayPause = () => {
-    if (!audioRef.current || !audioRef.current.src) {
+    const audio = audioRef.current;
+    if (!audio || !audio.src) {
       console.warn("Audio source is not set. Cannot play.");
       return;
     }
@@ -160,34 +185,34 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
   };
 
   const stopAudio = () => {
-    if (audioRef.current) {
-      fadeOut(audioRef.current, 0.1, () => {
-        audioRef.current.currentTime = 0;
-        audioRef.current.pause();
-        setIsPlaying(false);
-        setTrackProgress(0);
-      });
-    }
-  };
-
-  const clearPlayer = () => {
-    setCurrentTrack(null);
-    setCurrentTrackTitle(null);
-    setVinylOnPlayer(null);
-    onVinylChange(null);
-    setTrackProgress(0);
-    setNowPlaying("No track selected");
-    setIsReturning(false);
+    const audio = audioRef.current;
+    if (!audio) return;
+    fadeOut(audio, 0.1, () => {
+      audio.currentTime = 0;
+      audio.pause();
+      setIsPlaying(false);
+      setTrackProgress(0);
+    });
   };
 
   const stopAudioForEject = () => {
-    if (!audioRef.current) return;
-    fadeOut(audioRef.current, 0.1, () => {
-      audioRef.current.pause();
-      audioRef.current.src = "";
-      audioRef.current.load();
+    const audio = audioRef.current;
+    if (!audio) return;
+    fadeOut(audio, 0.1, () => {
+      audio.pause();
+      audio.removeAttribute("src");
+      audio.load();
       setIsPlaying(false);
     });
+  };
+
+  const handleTrackDrop = (item) => {
+    if (!item?.record) {
+      console.error("No record received! Check Vinyl component.");
+      return;
+    }
+    onLoad(item.record);
+    setDropActive(false);
   };
 
   // Measures the record's home slot in the menu. Returns the delta from the
@@ -198,8 +223,8 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
   // of hand-off, so unmounting one and un-dimming the other is invisible.
   const measureHomeSlot = () => {
     const playerVinylEl = vinylElRef.current;
-    const menuVinylEl = vinylOnPlayer
-      ? document.querySelector(`.vinyl-record[data-vinyl-title="${CSS.escape(vinylOnPlayer.title)}"]`)
+    const menuVinylEl = record
+      ? document.querySelector(`.vinyl-record[data-record-id="${CSS.escape(record.id)}"]`)
       : null;
     if (!playerVinylEl || !menuVinylEl) return null;
 
@@ -220,12 +245,70 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
     };
   };
 
+  // The mirror image of flyHome: the record lifts off the menu slot that was
+  // tapped and lands on the platter. `from` is that slot's rect captured at the
+  // moment of the tap -- before it starts dimming -- so the record leaves from
+  // exactly where the finger was, and the slot fades out behind it.
+  //
+  // No opacity animation here, unlike the flight home: the record is at full
+  // opacity for the whole trip, and it's the slot underneath that dims.
+  const flyIn = (from) => {
+    const el = vinylElRef.current;
+    if (!el) return;
+
+    const playerRect = el.getBoundingClientRect();
+    const playerWidth = el.offsetWidth;
+    if (!playerWidth || !from.width) return;
+
+    const dx = from.cx - (playerRect.left + playerRect.width / 2);
+    const dy = from.cy - (playerRect.top + playerRect.height / 2);
+    const scale = from.width / playerWidth;
+
+    const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion) {
+      el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 140, easing: "ease-out" });
+      return;
+    }
+
+    const flight = el.animate(
+      [
+        {
+          transform: `translate(${dx}px, ${dy}px) scale(${scale})`,
+          easing: "cubic-bezier(0.34, 0, 0.4, 1)",
+        },
+        // Overshoots slightly past the platter before settling, so the record
+        // reads as having weight rather than sliding into place.
+        {
+          offset: 0.72,
+          transform: `translate(${dx * 0.1}px, ${dy * 0.1 - 14}px) scale(1.06)`,
+          easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+        },
+        { transform: "translate(0px, 0px) scale(1)" },
+      ],
+      { duration: LOAD_FLIGHT_MS }
+    );
+
+    // Same guarantee the flight home gets from its timer, for the same reason:
+    // if the document timeline is stalled (backgrounded tab, throttled frames)
+    // the animation can sit at its first keyframe indefinitely, which here means
+    // the record hangs in mid-air over the menu instead of landing. Cancelling
+    // drops it onto the platter -- the animation has no fill, so its natural
+    // state *is* the landed one.
+    clearTimeout(loadFlightTimeoutRef.current);
+    loadFlightTimeoutRef.current = setTimeout(() => {
+      if (flight.playState !== "finished") flight.cancel();
+    }, LOAD_FLIGHT_MS + 60);
+  };
+
   const finishFlight = () => {
     if (!isReturningRef.current) return;
     isReturningRef.current = false;
     clearTimeout(flightTimeoutRef.current);
     flightTimeoutRef.current = null;
-    clearPlayer();
+    setTrackProgress(0);
+    setTrackDuration(0);
+    setIsReturning(false);
+    onEjectComplete();
   };
 
   // The single eject animation, shared by the Eject button and the drag-off.
@@ -238,7 +321,7 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
   // ticks: the whole from/to path is declared in one call, so it can't
   // half-apply if a frame is dropped or the tab isn't actively rendering.
   const flyHome = (from, { duration, liftOff }) => {
-    if (!vinylOnPlayer || isReturningRef.current) return;
+    if (!record || isReturningRef.current) return;
     isReturningRef.current = true;
     stopAudioForEject();
     setIsReturning(true);
@@ -300,18 +383,24 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
     { duration: EJECT_FLIGHT_MS, liftOff: true }
   );
 
-  useEffect(() => () => clearTimeout(flightTimeoutRef.current), []);
+  useEffect(() => () => {
+    clearTimeout(flightTimeoutRef.current);
+    clearTimeout(loadFlightTimeoutRef.current);
+    clearTimeout(scrollTimeoutRef.current);
+    if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
+    audioRef.current?.pause();
+  }, []);
 
   const [{ isOver }, drop] = useDrop(() => ({
     accept: "VINYL",
     drop: handleTrackDrop,
     collect: (monitor) => ({ isOver: !!monitor.isOver() }),
-  }));
+  }), [onLoad]);
 
   const [{ isDraggingOff }, dragOff] = useDrag(() => ({
     type: "PLAYER_VINYL",
-    item: { type: "PLAYER_VINYL" },
-    canDrag: !!vinylOnPlayer && !isReturning,
+    item: () => ({ record, size: vinylElRef.current?.offsetWidth }),
+    canDrag: !!record && !isReturning,
     end: (item, monitor) => {
       const dropPoint = monitor.getClientOffset();
       const startPoint = monitor.getInitialClientOffset();
@@ -322,7 +411,7 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
       flyHome(from, { duration: DRAG_FLIGHT_MS, liftOff: false });
     },
     collect: (monitor) => ({ isDraggingOff: !!monitor.isDragging() }),
-  }), [vinylOnPlayer, isReturning]);
+  }), [record, isReturning]);
 
   // Add effect to handle drop zone active state
   useEffect(() => {
@@ -357,7 +446,7 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
           <circle cx="150" cy="150" r="140" fill="#222" stroke="#111" strokeWidth="5" />
           <g>
             <circle cx="150" cy="150" r="120" fill="black" stroke="gray" strokeWidth="2" />
-            {currentTrack &&
+            {record &&
               [110, 100, 90, 80, 70, 60, 50, 40, 30, 20].map((r, i) => (
                 <circle
                   key={i}
@@ -375,14 +464,14 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
         </svg>
 
         {/* Vinyl overlay on the player */}
-        {vinylOnPlayer && (
+        {record && (
           <div
             ref={(node) => {
               vinylElRef.current = node;
               dragOff(node);
             }}
             className={`vinyl-on-player ${isEntering ? "entering" : ""} ${isPlaying && !isReturning ? "spinning" : ""} ${isReturning ? "returning" : ""} ${isDraggingOff ? "dragging-off" : ""}`}
-            style={{ background: getVinylColor(vinylOnPlayer.title) }}
+            style={{ background: record.color }}
           >
             <div className="vinyl-grooves"></div>
           </div>
@@ -395,7 +484,7 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
         )}
       </div>
 
-      {currentTrack ? (
+      {record ? (
         <div className="controls">
           <div className="buttons">
             <button onClick={togglePlayPause} className={isPlaying ? "active" : ""}>
@@ -405,7 +494,7 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
             <button onClick={() => ejectVinyl()}>Eject</button>
           </div>
           <div className="now-playing">
-            <p>{nowPlaying}</p>
+            <p>{record.trackLabel}</p>
             <div className="progress-bar">
               <div className="progress" style={{ transform: `scaleX(${trackProgress / 100})` }}></div>
             </div>
@@ -417,7 +506,9 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
         </div>
       ) : null}
 
-      <Content trackTitle={currentTrackTitle} />
+      <div ref={contentRef}>
+        <Content record={record} />
+      </div>
     </div>
   );
 };

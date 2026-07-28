@@ -7,7 +7,7 @@
   align-items: center;
   justify-content: center;
   margin: 15px;
-  cursor: grab;
+  cursor: pointer;
   position: relative;
   box-shadow:
     0 5px 15px rgba(0, 0, 0, 0.5),
@@ -16,18 +16,35 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   overflow: hidden;
   -webkit-tap-highlight-color: transparent;
-  touch-action: none;
+  /* pan-y, not none: the page has to keep scrolling when a finger starts on a
+     record. TouchBackend only claims the gesture once the press passes its
+     start delay, so vertical scrolling and long-press-to-drag can coexist. */
+  touch-action: pan-y;
 }
 
-.vinyl-record:hover {
-  transform: translateY(-5px) scale(1.05);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.7);
+/* Hover effects are gated so they can't stick on a touch device. A stuck
+   :hover would also leave the record scaled at 1.05, and the flight animation
+   measures this element's live rect -- it would take off from the wrong size. */
+@media (hover: hover) {
+  .vinyl-record {
+    cursor: grab;
+  }
+
+  .vinyl-record:hover {
+    transform: translateY(-5px) scale(1.05);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.7);
+  }
 }
 
 .vinyl-record:active,
 .vinyl-record.pressed {
   transform: scale(0.95);
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.vinyl-record:focus-visible {
+  outline: 2px solid #00b881;
+  outline-offset: 4px;
 }
 
 .vinyl-record.dragging {
@@ -83,34 +100,24 @@
   letter-spacing: 1px;
 }
 
-@keyframes pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4);
-  }
-
-  70% {
-    box-shadow: 0 0 0 10px rgba(255, 255, 255, 0);
-  }
-
-  100% {
-    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+/* Responsive styles. Three records sit side by side at every width, so they
+   have to shrink rather than wrap. */
+@media (max-width: 768px) {
+  .vinyl-record {
+    width: 96px;
+    height: 96px;
+    margin: 8px;
   }
 }
 
-/* Mobile-specific styles */
-@media (max-width: 768px) {
+@media (max-width: 480px) {
   .vinyl-record {
-    cursor: pointer;
+    width: 76px;
+    height: 76px;
+    margin: 4px;
   }
 
-  .vinyl-record:active,
-  .vinyl-record.pressed {
-    transform: scale(0.95);
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-  }
-
-  .vinyl-record.dragging {
-    transform: scale(1.1);
-    cursor: grabbing;
+  .vinyl-label span {
+    font-size: 10px;
   }
 }

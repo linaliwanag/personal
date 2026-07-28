@@ -1,146 +1,81 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
+import { TouchBackend } from "react-dnd-touch-backend";
 
 import RecordPlayer from "./components/RecordPlayer";
 import Vinyl from "./components/Vinyl";
-import Modal from "./components/Modal";
-import Content from "./components/Content";
+import RecordDragLayer from "./components/RecordDragLayer";
+import { records } from "./records";
+import { isCoarsePointer } from "./pointer";
 import './App.css'
 
-// Shared data structure for both mobile and desktop views
-const vinylData = [
-  {
-    id: 1,
-    title: "About",
-    filePath: "/assets/music/daisies.mp3"
-  },
-  {
-    id: 2,
-    title: "Projects",
-    filePath: "/assets/music/can_i_call_this_bossa_nova.mp3"
-  },
-  {
-    id: 3,
-    title: "Contact",
-    filePath: "/assets/music/good_enough.mp3"
-  }
-];
+// delayTouchStart is what lets tap-to-load and drag-to-load share the same
+// record. A quick tap finishes well inside the delay, so no drag ever starts
+// and the click handler runs untouched; holding past it begins a drag instead.
+const dndBackend = isCoarsePointer ? TouchBackend : HTML5Backend;
+const dndOptions = isCoarsePointer
+  ? { delayTouchStart: 200, ignoreContextMenu: true, enableMouseEvents: false }
+  : {};
 
 const App = () => {
   const [isDragging, setIsDragging] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-  const [showMobileView, setShowMobileView] = useState(() => window.innerWidth <= 768);
-  const [selectedVinyl, setSelectedVinyl] = useState(null);
-  const [currentVinylOnPlayer, setCurrentVinylOnPlayer] = useState(null);
+  // The single source of truth for what's on the player.
+  // { record, source: "tap" | "drop", fromRect? } -- `source` picks which
+  // arrival animation plays, `fromRect` is where a tapped record flies in from.
+  const [loaded, setLoaded] = useState(null);
 
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-
-    return () => window.removeEventListener('resize', checkMobile);
+  const loadByTap = useCallback((record, fromRect) => {
+    setLoaded((prev) =>
+      prev?.record.id === record.id ? prev : { record, source: "tap", fromRect }
+    );
   }, []);
 
-  // Add some effects for dragging
-  const handleDragStart = () => {
-    setIsDragging(true);
-  };
+  const loadByDrop = useCallback((record) => {
+    setLoaded((prev) =>
+      prev?.record.id === record.id ? prev : { record, source: "drop" }
+    );
+  }, []);
 
-  const handleDragEnd = () => {
-    setIsDragging(false);
-  };
+  // Fired once the ejected record has landed back in its menu slot, not when
+  // eject is pressed -- the record has to stay mounted for the whole flight.
+  const handleEjectComplete = useCallback(() => setLoaded(null), []);
 
-  const toggleView = () => {
-    setShowMobileView(!showMobileView);
-  };
+  return (
+    <DndProvider backend={dndBackend} options={dndOptions}>
+      <div className="animated-background"></div>
+      {isCoarsePointer && <RecordDragLayer />}
 
-  const handleVinylClick = (vinyl) => {
-    setSelectedVinyl(vinyl);
-  };
-
-
-
-  const renderMobileView = () => (
-    <div className="mobile-view">
-      <div className="mobile-content">
+      <div className={`app-container ${isDragging ? 'dragging-active' : ''}`}>
         <header>
           <h1 className="main-title">Hi there, I'm Paulina!</h1>
-          <p className="subtitle">Tap a record to learn more about me!</p>
-          <p className="subtitle">Visit the desktop version for more features 😊✌️</p>
+          <p className="subtitle">Tap or drag a record onto the player to learn more about me!</p>
         </header>
 
         <div className="vinyl-menu">
-          {vinylData.map((vinyl, index) => (
+          {records.map((record) => (
             <div
-              key={index}
+              key={record.id}
               className="vinyl-wrapper"
-              onClick={() => handleVinylClick(vinyl)}
+              onDragStart={() => setIsDragging(true)}
+              onDragEnd={() => setIsDragging(false)}
             >
               <Vinyl
-                title={vinyl.title}
-                filePath={vinyl.filePath}
+                record={record}
+                isOnPlayer={loaded?.record.id === record.id}
+                onSelect={loadByTap}
               />
-              <span className="vinyl-hint">{vinyl.title}</span>
+              <span className="vinyl-hint">{record.title}</span>
             </div>
           ))}
         </div>
 
-        <Modal
-          isOpen={!!selectedVinyl}
-          onClose={() => setSelectedVinyl(null)}
-          title={selectedVinyl?.title}
-        >
-          <Content trackTitle={selectedVinyl?.title} />
-        </Modal>
+        <RecordPlayer
+          loaded={loaded}
+          onLoad={loadByDrop}
+          onEjectComplete={handleEjectComplete}
+        />
       </div>
-    </div>
-  );
-
-  const renderDesktopView = () => (
-    <div className={`app-container ${isDragging ? 'dragging-active' : ''}`}>
-      <header>
-        <h1 className="main-title">Hi there, I'm Paulina!</h1>
-        <p className="subtitle">Drag a record onto the player to learn more about me!</p>
-      </header>
-
-      <div className="vinyl-menu">
-        {vinylData.map((vinyl, index) => (
-          <div
-            key={index}
-            className="vinyl-wrapper"
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-          >
-            <Vinyl
-              title={vinyl.title}
-              filePath={vinyl.filePath}
-              isOnPlayer={currentVinylOnPlayer?.title === vinyl.title}
-            />
-            <span className="vinyl-hint">{vinyl.title}</span>
-          </div>
-        ))}
-      </div>
-
-      <RecordPlayer
-        onVinylChange={setCurrentVinylOnPlayer}
-        currentVinyl={currentVinylOnPlayer}
-      />
-    </div>
-  );
-
-  return (
-    <DndProvider backend={HTML5Backend}>
-      <div className="animated-background"></div>
-      {isMobile && (
-        <button className="view-toggle" onClick={toggleView}>
-          {showMobileView ? 'Switch to Record Player' : 'Switch to Mobile View'}
-        </button>
-      )}
-      {showMobileView ? renderMobileView() : renderDesktopView()}
     </DndProvider>
   );
 };

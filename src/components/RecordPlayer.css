@@ -37,13 +37,19 @@
     margin: 2rem;
     border: 8px solid #333;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
+    flex-shrink: 0;
 }
 
-.record-player:hover {
-    box-shadow:
-        0 15px 40px rgba(0, 0, 0, 0.8),
-        inset 0 2px 10px rgba(255, 255, 255, 0.15);
-    transform: translateY(-5px);
+/* Gated: on a touch device :hover sticks after a tap, and this rule shifts the
+   whole housing 5px up. The flight animations measure the record's live
+   position inside it, so a stuck hover would offset where they land. */
+@media (hover: hover) {
+    .record-player:hover {
+        box-shadow:
+            0 15px 40px rgba(0, 0, 0, 0.8),
+            inset 0 2px 10px rgba(255, 255, 255, 0.15);
+        transform: translateY(-5px);
+    }
 }
 
 /* Drop indicator */
@@ -60,6 +66,8 @@
     border-radius: 50%;
     z-index: 10;
     animation: pulse 1.5s infinite;
+    pointer-events: none;
+    padding: 0 12px;
 }
 
 .drop-indicator span {
@@ -83,7 +91,9 @@
     }
 }
 
-/* Vinyl overlay on the player */
+/* Vinyl overlay on the player. Its size has to track .record-player at every
+   breakpoint -- it used to stay 240px while the housing shrank to 200px, which
+   only went unnoticed because the player never rendered on mobile. */
 .vinyl-on-player {
     position: absolute;
     width: 240px;
@@ -99,6 +109,7 @@
     z-index: 5;
     border: 1px solid rgba(255, 255, 255, 0.05);
     cursor: grab;
+    touch-action: pan-y;
 }
 
 .vinyl-on-player:active {
@@ -230,16 +241,25 @@
     cursor: pointer;
     transition: all 0.2s ease;
     font-weight: 600;
+    font-family: inherit;
     box-shadow: 0 3px 5px rgba(0, 0, 0, 0.2);
     min-width: 80px;
+    min-height: 44px;
     position: relative;
     overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
 }
 
-.buttons button:hover {
-    background: linear-gradient(to bottom, #555, #444);
-    transform: translateY(-2px);
-    box-shadow: 0 5px 8px rgba(0, 0, 0, 0.3);
+@media (hover: hover) {
+    .buttons button:hover {
+        background: linear-gradient(to bottom, #555, #444);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .buttons button.active:hover {
+        background: linear-gradient(to bottom, #00d4a4, #00b881);
+    }
 }
 
 .buttons button:active {
@@ -250,10 +270,6 @@
 .buttons button.active {
     background: linear-gradient(to bottom, #00b881, #009e6e);
     box-shadow: 0 0 10px rgba(0, 184, 129, 0.5);
-}
-
-.buttons button.active:hover {
-    background: linear-gradient(to bottom, #00d4a4, #00b881);
 }
 
 /* Now Playing UI */
@@ -305,15 +321,24 @@
 
 /* Responsive styles */
 @media (max-width: 768px) {
-    .record-player {
-        width: 250px !important;
-        height: 250px !important;
-        margin: 1rem !important;
+    .record-player-container {
+        min-height: 0;
+        padding: 10px;
     }
 
-    .vinyl {
-        width: 150px !important;
-        height: 150px !important;
+    .record-player {
+        width: 250px;
+        height: 250px;
+        margin: 1rem;
+    }
+
+    .vinyl-on-player {
+        width: 200px;
+        height: 200px;
+    }
+
+    .drop-indicator span {
+        font-size: 1rem;
     }
 
     .buttons {
@@ -323,9 +348,9 @@
     }
 
     .buttons button {
-        padding: 8px 16px !important;
-        font-size: 0.9rem !important;
-        min-width: 70px !important;
+        padding: 8px 16px;
+        font-size: 0.9rem;
+        min-width: 84px;
     }
 
     .now-playing {
@@ -343,20 +368,24 @@
 
 @media (max-width: 480px) {
     .record-player {
-        width: 200px !important;
-        height: 200px !important;
-        margin: 0.5rem !important;
+        width: 210px;
+        height: 210px;
+        margin: 0.75rem;
     }
 
-    .vinyl {
-        width: 120px !important;
-        height: 120px !important;
+    .vinyl-on-player {
+        width: 168px;
+        height: 168px;
+    }
+
+    .drop-indicator span {
+        font-size: 0.85rem;
     }
 
     .buttons button {
-        padding: 6px 12px !important;
-        font-size: 0.8rem !important;
-        min-width: 60px !important;
+        padding: 8px 12px;
+        font-size: 0.85rem;
+        min-width: 76px;
     }
 
     .now-playing {

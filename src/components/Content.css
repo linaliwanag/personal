@@ -40,9 +40,22 @@
   position: relative;
 }
 
-.content-box a:hover {
-  color: #00d4a4;
-  text-shadow: 0 0 5px rgba(0, 212, 164, 0.5);
+@media (hover: hover) {
+  .content-box a:hover {
+    color: #00d4a4;
+    text-shadow: 0 0 5px rgba(0, 212, 164, 0.5);
+  }
+
+  .content-box a:hover:after {
+    width: 100%;
+  }
+
+  .project-screenshot:hover {
+    transform: scale(1.08);
+    cursor: pointer;
+    z-index: 10;
+    position: relative;
+  }
 }
 
 .content-box a:after {
@@ -54,10 +67,6 @@
   left: 0;
   background: linear-gradient(90deg, #00b881, #0088b8);
   transition: width 0.3s ease;
-}
-
-.content-box a:hover:after {
-  width: 100%;
 }
 
 @keyframes fadeIn {
@@ -122,9 +131,3 @@
   transform-origin: center;
 }
 
-.project-screenshot:hover {
-  transform: scale(1.08);
-  cursor: pointer;
-  z-index: 10;
-  position: relative;
-}
