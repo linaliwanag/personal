@@ -1,10 +1,12 @@
-/* Modern reset and base styles.
+/* Global reset and base styles shared by every variant. Anything that belongs
+   to one variant's look lives in that variant's own stylesheet.
+
    Deliberately no `height: 100%` here. Combined with overflow-x: hidden it
    pinned <body> to the viewport height and made *body itself* the scroll
    container instead of the page -- window.scrollY stayed 0 no matter how far
    you scrolled, scrollIntoView couldn't move the page, and iOS lost momentum
-   scrolling and the collapsing URL bar. .app-container's min-height: 100vh is
-   what actually fills the screen. */
+   scrolling and the collapsing URL bar. Each variant's own min-height: 100vh
+   wrapper is what actually fills the screen. */
 html,
 body {
   margin: 0;
@@ -15,107 +17,18 @@ body {
   overflow-x: hidden;
 }
 
-/* Main app container */
-.app-container {
+/* Shown while a lazily-loaded variant's chunk is in flight. Variants are code
+   split, so switching to one for the first time is a real network round trip. */
+.variant-loading {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   min-height: 100vh;
   width: 100%;
-  text-align: center;
-  padding: 40px 20px;
-  position: relative;
-  z-index: 1;
-  transition: all 0.3s ease;
-  animation: fadeIn 1s ease-out;
-}
-
-/* Add some visual feedback during dragging */
-.app-container.dragging-active {
-  background-color: rgba(0, 0, 0, 0.3);
-}
-
-/* Header and titles */
-header {
-  margin-bottom: 40px;
-}
-
-.main-title {
-  font-size: 3rem;
-  font-weight: 700;
-  margin: 0 0 10px 0;
-  background: linear-gradient(90deg, #ffffff, #cccccc);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  text-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-}
-
-.subtitle {
-  font-size: 1.2rem;
-  font-weight: 300;
-  margin: 0;
-  opacity: 0.8;
-}
-
-/* Vinyl menu styling. Stays a row at every size -- the menu and the player have
-   to be on screen together or the record flies to/from somewhere the reader
-   can't see. */
-.vinyl-menu {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  flex-wrap: nowrap;
-  gap: 30px;
-  margin: 20px 0 40px 0;
-}
-
-.vinyl-wrapper {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  transition: all 0.3s ease;
-}
-
-.vinyl-hint {
-  margin-top: 10px;
   font-size: 0.9rem;
-  opacity: 0.7;
-  transition: opacity 0.3s ease;
-}
-
-@media (hover: hover) {
-  .vinyl-wrapper:hover .vinyl-hint {
-    opacity: 1;
-  }
-}
-
-/* Animated background */
-.animated-background {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(120deg, #111, #1b2735, #192230);
-  background-size: 400% 400%;
-  animation: gradientAnimation 15s ease infinite;
-  z-index: -1;
-}
-
-@keyframes gradientAnimation {
-  0% {
-    background-position: 0% 50%;
-  }
-
-  50% {
-    background-position: 100% 50%;
-  }
-
-  100% {
-    background-position: 0% 50%;
-  }
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  opacity: 0.45;
 }
 
 /* Loading animation */
@@ -126,56 +39,5 @@ header {
 
   to {
     opacity: 1;
-  }
-}
-
-/* Responsive styles */
-@media (max-width: 768px) {
-  .app-container {
-    padding: 32px 16px;
-  }
-
-  header {
-    margin-bottom: 24px;
-  }
-
-  .main-title {
-    font-size: 2rem;
-  }
-
-  .subtitle {
-    font-size: 1rem;
-  }
-
-  .vinyl-menu {
-    gap: 16px;
-    margin: 12px 0 24px 0;
-  }
-
-  .vinyl-hint {
-    margin-top: 8px;
-    font-size: 0.85rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .app-container {
-    padding: 24px 12px;
-  }
-
-  .main-title {
-    font-size: 1.75rem;
-  }
-
-  .subtitle {
-    font-size: 0.9rem;
-  }
-
-  .vinyl-menu {
-    gap: 10px;
-  }
-
-  .vinyl-hint {
-    font-size: 0.8rem;
   }
 }

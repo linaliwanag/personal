@@ -2,8 +2,9 @@ import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { useDrag, useDrop } from "react-dnd";
 import "./RecordPlayer.css";
 
-import Content from "./Content";
-import { isCoarsePointer } from "../pointer";
+import Content from "../../components/Content";
+import { formatTime } from "../../audio/useTurntableAudio";
+import { isCoarsePointer } from "../../pointer";
 
 // How long the record takes to travel between its slot in the menu and the
 // platter. The button eject gets a little longer because it also plays the
@@ -12,18 +13,13 @@ const EJECT_FLIGHT_MS = 560;
 const DRAG_FLIGHT_MS = 420;
 const LOAD_FLIGHT_MS = 520;
 
-const RecordPlayer = ({ loaded, onLoad, onEjectComplete }) => {
+const RecordPlayer = ({ loaded, onLoad, onEjectComplete, onEjectStart, audio }) => {
   const record = loaded?.record ?? null;
 
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [trackProgress, setTrackProgress] = useState(0);
-  const [trackDuration, setTrackDuration] = useState(0);
   const [dropActive, setDropActive] = useState(false);
   const [isReturning, setIsReturning] = useState(false);
   const [isEntering, setIsEntering] = useState(false);
 
-  const audioRef = useRef(null);
-  const fadeIntervalRef = useRef(null);
   const vinylElRef = useRef(null);
   const isReturningRef = useRef(false);
   const flightTimeoutRef = useRef(null);
@@ -31,101 +27,13 @@ const RecordPlayer = ({ loaded, onLoad, onEjectComplete }) => {
   const scrollTimeoutRef = useRef(null);
   const contentRef = useRef(null);
 
-  // One <audio> element for the player's whole lifetime, rather than a fresh
-  // one per track. iOS grants permission to play to a *specific element* when
-  // the user gestures at it, and that permission then sticks for the session --
-  // so reusing the element is what makes later, deferred plays (the one behind
-  // a cross-fade, say) work at all.
-  const getAudio = () => {
-    if (!audioRef.current) {
-      const audio = new Audio();
-      audio.preload = "auto";
-      audio.onloadedmetadata = () => setTrackDuration(audio.duration || 0);
-      audio.ontimeupdate = () => {
-        if (audio.duration) {
-          setTrackProgress((audio.currentTime / audio.duration) * 100);
-        }
-      };
-      audio.onended = () => {
-        setIsPlaying(false);
-        setTrackProgress(0);
-      };
-      audioRef.current = audio;
-    }
-    return audioRef.current;
-  };
-
-  const fadeIn = (audioElement, step) => {
-    if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
-    let volume = 0;
-    audioElement.volume = 0;
-    fadeIntervalRef.current = setInterval(() => {
-      if (volume < 0.8) {
-        volume = Math.min(volume + step, 0.8);
-        audioElement.volume = volume;
-      } else {
-        clearInterval(fadeIntervalRef.current);
-        fadeIntervalRef.current = null;
-      }
-    }, 100);
-  };
-
-  const fadeOut = (audioElement, step, callback) => {
-    if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
-    let volume = audioElement.volume;
-    fadeIntervalRef.current = setInterval(() => {
-      if (volume > 0) {
-        volume = Math.max(volume - step, 0);
-        audioElement.volume = volume;
-      } else {
-        clearInterval(fadeIntervalRef.current);
-        fadeIntervalRef.current = null;
-        callback();
-      }
-    }, 100);
-  };
-
-  // The first play() of the session has to happen synchronously inside the
-  // gesture that loaded the record, or iOS rejects it -- which is why this is
-  // called from a layout effect and not from a metadata/canplay callback. Once
-  // that first play has been granted, the element is unlocked and the fade-out
-  // path below (which resumes on a timer) is allowed too.
-  const startTrack = (rec) => {
-    const audio = getAudio();
-
-    const begin = () => {
-      audio.src = window.location.origin + rec.file;
-      audio.volume = 0;
-      setTrackProgress(0);
-      audio
-        .play()
-        .then(() => {
-          setIsPlaying(true);
-          fadeIn(audio, 0.05);
-        })
-        .catch((error) => {
-          setIsPlaying(false);
-          // AbortError just means this play() was superseded -- the reader
-          // tapped another record, or hit eject, before it got going. That's
-          // ordinary, not a failure. NotAllowedError means the browser refused
-          // autoplay; the record still loads and the Play button is sitting
-          // right there, so it recovers on its own.
-          if (error.name === "AbortError") return;
-          console.error("Audio play failed:", error);
-        });
-    };
-
-    if (audio.src && !audio.paused) {
-      fadeOut(audio, 0.1, begin);
-    } else {
-      begin();
-    }
-  };
+  const isPlaying = audio.isPlaying;
 
   // useLayoutEffect, not useEffect: React flushes discrete input events (click,
   // touchend) synchronously, so a layout effect scheduled by one still runs
   // inside the browser's user-activation window. A passive effect would land
-  // after it had expired and iOS would refuse to play.
+  // after it had expired and iOS would refuse to play. Playback itself is
+  // kicked off by App on that same tick, for exactly the same reason.
   useLayoutEffect(() => {
     if (!loaded) return;
 
@@ -137,8 +45,6 @@ const RecordPlayer = ({ loaded, onLoad, onEjectComplete }) => {
       // flight from the menu would not.
       setIsEntering(true);
     }
-
-    startTrack(loaded.record);
 
     const enterTimer = setTimeout(() => setIsEntering(false), 500);
     // Touch only. On a phone the content sits far enough below the fold that
@@ -161,50 +67,6 @@ const RecordPlayer = ({ loaded, onLoad, onEjectComplete }) => {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded]);
-
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio || !audio.src) return;
-
-    if (isPlaying) {
-      if (audio.paused) {
-        audio.play().catch((error) => console.error("Audio play failed:", error));
-      }
-    } else if (!audio.paused) {
-      audio.pause();
-    }
-  }, [isPlaying]);
-
-  const togglePlayPause = () => {
-    const audio = audioRef.current;
-    if (!audio || !audio.src) {
-      console.warn("Audio source is not set. Cannot play.");
-      return;
-    }
-    setIsPlaying((prev) => !prev);
-  };
-
-  const stopAudio = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    fadeOut(audio, 0.1, () => {
-      audio.currentTime = 0;
-      audio.pause();
-      setIsPlaying(false);
-      setTrackProgress(0);
-    });
-  };
-
-  const stopAudioForEject = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    fadeOut(audio, 0.1, () => {
-      audio.pause();
-      audio.removeAttribute("src");
-      audio.load();
-      setIsPlaying(false);
-    });
-  };
 
   const handleTrackDrop = (item) => {
     if (!item?.record) {
@@ -305,8 +167,6 @@ const RecordPlayer = ({ loaded, onLoad, onEjectComplete }) => {
     isReturningRef.current = false;
     clearTimeout(flightTimeoutRef.current);
     flightTimeoutRef.current = null;
-    setTrackProgress(0);
-    setTrackDuration(0);
     setIsReturning(false);
     onEjectComplete();
   };
@@ -323,7 +183,7 @@ const RecordPlayer = ({ loaded, onLoad, onEjectComplete }) => {
   const flyHome = (from, { duration, liftOff }) => {
     if (!record || isReturningRef.current) return;
     isReturningRef.current = true;
-    stopAudioForEject();
+    onEjectStart();
     setIsReturning(true);
 
     const el = vinylElRef.current;
@@ -387,8 +247,6 @@ const RecordPlayer = ({ loaded, onLoad, onEjectComplete }) => {
     clearTimeout(flightTimeoutRef.current);
     clearTimeout(loadFlightTimeoutRef.current);
     clearTimeout(scrollTimeoutRef.current);
-    if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
-    audioRef.current?.pause();
   }, []);
 
   const [{ isOver }, drop] = useDrop(() => ({
@@ -417,14 +275,6 @@ const RecordPlayer = ({ loaded, onLoad, onEjectComplete }) => {
   useEffect(() => {
     setDropActive(isOver);
   }, [isOver]);
-
-  // Format track time
-  const formatTime = (seconds) => {
-    const totalSeconds = Math.floor(seconds * trackDuration / 100);
-    const mins = Math.floor(totalSeconds / 60);
-    const secs = Math.floor(totalSeconds % 60).toString().padStart(2, '0');
-    return `${mins}:${secs}`;
-  };
 
   return (
     <div
@@ -487,20 +337,20 @@ const RecordPlayer = ({ loaded, onLoad, onEjectComplete }) => {
       {record ? (
         <div className="controls">
           <div className="buttons">
-            <button onClick={togglePlayPause} className={isPlaying ? "active" : ""}>
+            <button onClick={audio.toggle} className={isPlaying ? "active" : ""}>
               {isPlaying ? "Pause" : "Play"}
             </button>
-            <button onClick={stopAudio}>Stop</button>
+            <button onClick={audio.stop}>Stop</button>
             <button onClick={() => ejectVinyl()}>Eject</button>
           </div>
           <div className="now-playing">
             <p>{record.trackLabel}</p>
             <div className="progress-bar">
-              <div className="progress" style={{ transform: `scaleX(${trackProgress / 100})` }}></div>
+              <div className="progress" style={{ transform: `scaleX(${audio.progress / 100})` }}></div>
             </div>
             <div className="time-display">
-              <span>{formatTime(trackProgress)}</span>
-              <span>{formatTime(100)}</span>
+              <span>{formatTime(audio.progress, audio.duration)}</span>
+              <span>{formatTime(100, audio.duration)}</span>
             </div>
           </div>
         </div>

@@ -1,0 +1,1991 @@
+/* Studio Deck -- an SL-1200-shaped mastering turntable stood up in CSS 3D.
+ *
+ * Everything here is scoped to `.studio-` because all variants' stylesheets can
+ * be in the document at once; there is deliberately not a single bare element
+ * selector below.
+ *
+ * THE COORDINATE SYSTEM IS NOT NEGOTIABLE.
+ * geometry.js models the deck in "plinth space" -- unrotated pixels on the top
+ * face, origin at its rear-left corner -- and Deck.jsx writes those numbers
+ * straight into inline `left` / `top` / `width` / `height` / `transform`. The
+ * tonearm drag projects the pointer back into that same space through three
+ * zero-sized probe elements. So the rules below may only ever *decorate*
+ * positioned fixtures; the moment a rule moves one of them, the stylus stops
+ * agreeing with the groove and dragging the arm scrubs to the wrong place.
+ *
+ * Concretely, that means:
+ *   - every element that carries an inline `transform` from JS gets
+ *     `transform-origin: 0 0` (the faces, the tonearm rotor) or explicit
+ *     margin/`translate` centring -- never a competing `transform`;
+ *   - centring that has to survive a Web Animations takeover of `transform`
+ *     (the flying record, the VU needles, the fader knob) is done with the
+ *     independent `translate` property or with margins, because WAAPI replaces
+ *     the whole `transform` property and would otherwise throw the offset away.
+ */
+
+/* --------------------------------------------------------------------------
+   Tokens
+   -------------------------------------------------------------------------- */
+
+.studio-root {
+  /* The scene is authored at one fixed size and scaled as a unit. Scaling the
+     perspective by the same factor keeps the foreshortening identical at every
+     breakpoint -- a smaller deck, not a differently-shaped one. */
+  --studio-stage-w: 1120px;
+  --studio-stage-h: 620px;
+  --studio-scale: 0.78;
+
+  --studio-ink: #f2f0ec;
+  --studio-dim: rgba(238, 235, 228, 0.56);
+  --studio-faint: rgba(238, 235, 228, 0.3);
+  --studio-amber: #f0b25a;
+  --studio-amber-hot: #ffd08a;
+  --studio-red: #e2544a;
+  --studio-line: rgba(255, 255, 255, 0.1);
+  --studio-card: rgba(20, 21, 25, 0.72);
+
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 80% at 18% -10%, rgba(240, 178, 90, 0.16), transparent 58%),
+    radial-gradient(90% 70% at 82% 8%, rgba(84, 116, 168, 0.14), transparent 62%),
+    linear-gradient(178deg, #14151a 0%, #101116 42%, #08090c 100%);
+  color: var(--studio-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --------------------------------------------------------------------------
+   The room: key light, floor, dust
+   -------------------------------------------------------------------------- */
+
+.studio-room {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* A single hard-edged shaft from the upper left. It is what justifies the
+   specular direction on every piece of metal further down -- the deck's
+   highlights all run the same way as this beam. */
+.studio-beam {
+  position: absolute;
+  top: -30%;
+  left: -14%;
+  width: 62%;
+  height: 150%;
+  background: linear-gradient(
+    102deg,
+    transparent 0%,
+    rgba(255, 214, 158, 0.075) 34%,
+    rgba(255, 226, 182, 0.11) 50%,
+    rgba(255, 214, 158, 0.05) 64%,
+    transparent 84%
+  );
+  transform: rotate(-9deg);
+  filter: blur(2px);
+}
+
+.studio-floor {
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  bottom: 0;
+  height: 46%;
+  background:
+    radial-gradient(80% 120% at 50% 0%, rgba(240, 178, 90, 0.07), transparent 68%),
+    linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.55));
+}
+
+.studio-dust {
+  position: absolute;
+  inset: 0;
+}
+
+.studio-dust span {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 232, 200, 0.55);
+  box-shadow: 0 0 5px rgba(255, 226, 180, 0.5);
+  opacity: 0.35;
+  animation-name: studio-mote;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.studio-dust.is-still span {
+  animation: none;
+}
+
+@keyframes studio-mote {
+  0% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0;
+  }
+  14% {
+    opacity: 0.4;
+  }
+  86% {
+    opacity: 0.32;
+  }
+  100% {
+    transform: translate3d(46px, -120px, 0);
+    opacity: 0;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Page frame
+   -------------------------------------------------------------------------- */
+
+.studio-shell {
+  position: relative;
+  z-index: 1;
+  max-width: 1520px;
+  margin: 0 auto;
+  padding: clamp(58px, 7vh, 92px) clamp(18px, 4vw, 56px) clamp(56px, 8vh, 96px);
+}
+
+.studio-head {
+  margin: 0 0 clamp(18px, 3vh, 34px);
+}
+
+.studio-eyebrow {
+  margin: 0 0 10px;
+  font-size: 0.66rem;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--studio-amber);
+  opacity: 0.85;
+}
+
+.studio-name {
+  margin: 0;
+  font-size: clamp(2.1rem, 5.2vw, 3.5rem);
+  font-weight: 700;
+  line-height: 0.98;
+  letter-spacing: -0.022em;
+}
+
+.studio-name span {
+  display: block;
+  font-weight: 200;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(242, 240, 236, 0.55);
+}
+
+.studio-role {
+  margin: 14px 0 0;
+  max-width: 44ch;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--studio-dim);
+}
+
+.studio-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(330px, 0.85fr);
+  gap: clamp(20px, 3vw, 44px);
+  align-items: start;
+}
+
+/* --------------------------------------------------------------------------
+   Stage / perspective
+   -------------------------------------------------------------------------- */
+
+.studio-viewport {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: calc(var(--studio-stage-h) * var(--studio-scale));
+  /* Scaled in lockstep with the stage's scale3d below: perspective/(perspective
+     - z) is invariant when both the depths and the eye distance shrink by the
+     same factor, so the deck keeps its proportions at every size. */
+  perspective: calc(1500px * var(--studio-scale));
+  perspective-origin: 50% 46%;
+}
+
+.studio-stage {
+  position: relative;
+  flex: none;
+  width: var(--studio-stage-w);
+  height: var(--studio-stage-h);
+  transform-style: preserve-3d;
+  transform: scale3d(var(--studio-scale), var(--studio-scale), var(--studio-scale));
+  /* Click-through for the same reason as .studio-scene below. This one matters:
+     the scene alone is not enough, because .studio-stage opens the 3D context
+     that the sleeves are pushed back into, so its own box at z 0 still sits in
+     front of them and swallowed every click at the rack. */
+  pointer-events: none;
+}
+
+/* Parallax frame. JS writes --studio-lean-x / --studio-lean-y here from
+   pointermove and freezes them while a control is being dragged; the fallbacks
+   keep the scene square on touch devices, where the effect is skipped. */
+.studio-scene {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transform: rotateX(var(--studio-lean-x, 0deg)) rotateY(var(--studio-lean-y, 0deg));
+  /* See the hit-testing note below -- the whole scene is click-through. */
+  pointer-events: none;
+}
+
+/* HIT TESTING IN A preserve-3d SCENE -- read this before adding a control.
+ *
+ * Inside a 3D rendering context an element's *own* box is just another plane,
+ * sorted against its children rather than wrapping them. A box with no
+ * background still hit-tests, so any ancestor whose plane happens to sit nearer
+ * the viewer than a control swallows every pointer event aimed at it -- while
+ * the control stays perfectly visible, because painting and hit-testing sort
+ * the same way and the control is genuinely behind.
+ *
+ * That is not hypothetical here. `.studio-rack-slots` is at translateZ(-20px)
+ * and each sleeve leans a further -7px per index, so all three sleeves sit at
+ * z -20..-34: behind `.studio-rack`'s own (unpainted) box at z 0, and behind
+ * `.studio-scene`'s upright plane at z 0. elementFromPoint over a sleeve
+ * returned the *grandparent*, and the records could not be loaded at all.
+ *
+ * Nudging the z of individual fixtures only moves the problem around: the deck
+ * is tipped 57deg, so its planes cut straight through the scene's upright one
+ * and "in front" is different for the rear of the plinth than for the front.
+ * Depth is the wrong tool. Instead the entire decorative scene is made
+ * click-through -- on BOTH .studio-stage and .studio-scene, since the stage is
+ * what opens the 3D context the sleeves sit behind, and silencing only the
+ * scene just moves the interception one level up -- and the handful of real
+ * controls opt back in -- hit testing
+ * skips a `pointer-events: none` box outright, whatever the sort order, so this
+ * is immune to every future change of transform, tilt or stacking.
+ *
+ * ADDING A CONTROL INSIDE .studio-scene MEANS ADDING IT TO THIS LIST.
+ * (`.studio-probe` is deliberately absent -- the projection probes must never
+ * take a hit.) */
+.studio-sleeve,
+.studio-headshell,
+.studio-fader-knob,
+.studio-power,
+.studio-key {
+  pointer-events: auto;
+}
+
+/* --------------------------------------------------------------------------
+   The crate
+   -------------------------------------------------------------------------- */
+
+.studio-rack {
+  position: absolute;
+  left: 16%;
+  top: 41%;
+  width: 306px;
+  height: 372px;
+  translate: -50% -50%;
+  transform-style: preserve-3d;
+  transform: rotateY(17deg) rotateX(3deg);
+}
+
+.studio-rack-back {
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  transform: translateZ(-52px);
+  background:
+    repeating-linear-gradient(
+      91deg,
+      rgba(255, 255, 255, 0.035) 0 2px,
+      rgba(0, 0, 0, 0.07) 2px 5px,
+      transparent 5px 26px
+    ),
+    linear-gradient(168deg, #4a3a2c 0%, #3a2d22 46%, #241c15 100%);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 226, 186, 0.14),
+    inset 0 -30px 46px rgba(0, 0, 0, 0.55);
+}
+
+/* Hinged along the crate's bottom front edge and folded straight back, so the
+   sleeves have a floor that recedes instead of a painted-on one. */
+.studio-rack-floor {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 52px;
+  transform-origin: 50% 100%;
+  transform: rotateX(90deg);
+  background: linear-gradient(180deg, #1a140f, #33281e);
+  box-shadow: inset 0 8px 20px rgba(0, 0, 0, 0.6);
+}
+
+.studio-rack-lip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 62px;
+  border-radius: 4px 4px 7px 7px;
+  transform: translateZ(6px);
+  background: linear-gradient(178deg, #6a5340 0%, #4a3a2c 34%, #2c2219 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 231, 194, 0.32),
+    0 12px 26px rgba(0, 0, 0, 0.5);
+}
+
+.studio-rack-label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 22px;
+  transform: translateZ(8px);
+  text-align: center;
+  font-size: 0.62rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(255, 226, 186, 0.5);
+}
+
+.studio-rack-slots {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  top: 24px;
+  bottom: 76px;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  transform: translateZ(-20px);
+  transform-style: preserve-3d;
+}
+
+/* --- sleeves ------------------------------------------------------------- */
+
+.studio-sleeve {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 66px;
+  cursor: pointer;
+  transform-style: preserve-3d;
+  /* --sleeve-i is the record's index; each sleeve leans a little further back
+     so the crate reads as something you flip through rather than a list. */
+  transform: translateZ(calc(var(--sleeve-i, 0) * -7px)) rotateY(calc(var(--sleeve-i, 0) * -1.6deg));
+  transition: transform 0.34s cubic-bezier(0.2, 0.8, 0.25, 1), opacity 0.3s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.studio-sleeve:hover,
+.studio-sleeve:focus-visible {
+  transform: translateZ(calc(var(--sleeve-i, 0) * -7px + 22px)) rotateY(calc(var(--sleeve-i, 0) * -1.6deg))
+    translateX(10px);
+}
+
+.studio-sleeve:focus-visible {
+  outline: 2px solid var(--studio-amber);
+  outline-offset: 4px;
+  border-radius: 5px;
+}
+
+.studio-sleeve:active {
+  transition-duration: 0.09s;
+  transform: translateZ(calc(var(--sleeve-i, 0) * -7px + 10px)) rotateY(calc(var(--sleeve-i, 0) * -1.6deg))
+    translateX(4px);
+}
+
+/* The record is on the deck: the slot it came out of stays open, so the crate
+   visibly has a gap in it for as long as the side is playing. */
+.studio-sleeve.is-out {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateZ(-40px) translateX(-26px) rotateY(-16deg);
+}
+
+.studio-sleeve-disc {
+  position: absolute;
+  top: 50%;
+  right: -13px;
+  width: 56px;
+  height: 56px;
+  margin-top: -28px;
+  border-radius: 50%;
+  transform: translateZ(-3px);
+  background:
+    radial-gradient(circle at 50% 50%, #6a6a70 0 5px, #16161a 6px 8px, transparent 9px),
+    repeating-radial-gradient(circle at 50% 50%, #101014 0 1px, #1b1b20 1px 2px),
+    #121216;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.6);
+}
+
+.studio-sleeve-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 0 62px 0 16px;
+  border-radius: 3px 2px 2px 3px;
+  overflow: hidden;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -14px 22px rgba(0, 0, 0, 0.36),
+    0 10px 20px rgba(0, 0, 0, 0.45);
+}
+
+/* Printed-card texture: a coarse fibre grain plus the darkening you get where
+   a sleeve has been thumbed at the opening. */
+.studio-sleeve-grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(
+      64deg,
+      rgba(255, 255, 255, 0.05) 0 1px,
+      transparent 1px 3px
+    ),
+    repeating-linear-gradient(
+      -21deg,
+      rgba(0, 0, 0, 0.08) 0 1px,
+      transparent 1px 4px
+    ),
+    radial-gradient(120% 90% at 8% 0%, rgba(255, 245, 225, 0.22), transparent 56%),
+    linear-gradient(100deg, transparent 62%, rgba(0, 0, 0, 0.32));
+  mix-blend-mode: overlay;
+}
+
+.studio-sleeve-kicker {
+  position: relative;
+  font-size: 0.53rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.66);
+}
+
+.studio-sleeve-title {
+  position: relative;
+  font-size: 1.02rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.studio-sleeve-track {
+  position: relative;
+  font-size: 0.63rem;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+/* The die-cut window every cheap reissue sleeve has, showing the label. */
+.studio-sleeve-hole {
+  position: absolute;
+  top: 50%;
+  right: 18px;
+  width: 26px;
+  height: 26px;
+  margin-top: -13px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 42% 36%, #2a2a30, #08080a 74%);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.9),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+/* The board thickness along the top -- a 5px plane hinged at the top edge and
+   folded back, which is what stops the sleeve reading as a flat rectangle. */
+.studio-sleeve-edge {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 6px;
+  transform-origin: 50% 0;
+  transform: rotateX(74deg);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.08));
+  border-radius: 2px 2px 0 0;
+}
+
+/* --------------------------------------------------------------------------
+   The deck
+   -------------------------------------------------------------------------- */
+
+.studio-deck {
+  position: absolute;
+  left: 63%;
+  top: 54%;
+  width: 580px;  /* PLINTH.w -- the plinth itself is sized inline to match */
+  height: 430px; /* PLINTH.h */
+  translate: -50% -50%;
+  transform-style: preserve-3d;
+  /* The one rotation the whole fixture layout is seen through. The pointer
+     projection in geometry.js inverts whatever this ends up being, so it can be
+     changed freely -- including the yaw -- without breaking the arm drag. */
+  transform: rotateX(57deg) rotateZ(-2.5deg);
+}
+
+/* Painted, not blurred: a `filter` here would flatten this node out of the
+   preserve-3d context it needs to stay depth-sorted in. */
+.studio-contact-shadow {
+  position: absolute;
+  left: -13%;
+  right: -13%;
+  top: -6%;
+  bottom: -14%;
+  transform: translateZ(-30px);
+  background: radial-gradient(
+    52% 50% at 50% 52%,
+    rgba(0, 0, 0, 0.78) 0%,
+    rgba(0, 0, 0, 0.44) 42%,
+    rgba(0, 0, 0, 0.14) 66%,
+    transparent 82%
+  );
+}
+
+.studio-plinth {
+  position: relative;
+  transform-style: preserve-3d;
+}
+
+/* Every face is hinged off an edge by an inline transform written in Deck.jsx.
+   Those transforms are authored against the element's top-left corner, so the
+   origin below is load-bearing -- the default 50% 50% folds all four skirts
+   into the middle of the box. */
+.studio-face {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  backface-visibility: hidden;
+}
+
+/* Brushed aluminium: a fine directional grain over a broad key-light gradient
+   that runs the same way as .studio-beam, plus a bright chamfer along the top
+   rim and a dark one along the bottom. */
+.studio-face--top {
+  transform-style: preserve-3d;
+  border-radius: 5px;
+  background:
+    repeating-linear-gradient(
+      93deg,
+      rgba(255, 255, 255, 0.035) 0 1px,
+      rgba(0, 0, 0, 0.045) 1px 2px,
+      transparent 2px 4px
+    ),
+    radial-gradient(70% 55% at 16% 8%, rgba(255, 236, 208, 0.14), transparent 62%),
+    linear-gradient(163deg, #5a5e66 0%, #43464d 18%, #2e3137 46%, #34373d 70%, #1d1f23 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.42),
+    inset 0 -40px 70px rgba(0, 0, 0, 0.3);
+}
+
+.studio-face--front,
+.studio-face--back,
+.studio-face--side {
+  background:
+    repeating-linear-gradient(
+      2deg,
+      rgba(255, 255, 255, 0.02) 0 1px,
+      transparent 1px 3px
+    ),
+    linear-gradient(180deg, #4d5057 0%, #303338 26%, #191b1f 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24);
+}
+
+.studio-face--front {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 26px;
+  background:
+    repeating-linear-gradient(
+      2deg,
+      rgba(255, 255, 255, 0.02) 0 1px,
+      transparent 1px 3px
+    ),
+    linear-gradient(180deg, #55585f 0%, #34373d 22%, #202226 62%, #101114 100%);
+}
+
+/* Darkened with paint rather than a `filter`: a filter would flatten this face
+   out of the plinth's preserve-3d context. */
+.studio-face--back {
+  background: linear-gradient(180deg, #2e3136 0%, #1c1e22 30%, #0c0d0f 100%);
+  box-shadow: none;
+}
+
+.studio-badge {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.26em;
+  color: rgba(255, 255, 255, 0.34);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.7);
+}
+
+.studio-badge--right {
+  font-weight: 400;
+  color: rgba(240, 178, 90, 0.42);
+}
+
+.studio-foot {
+  position: absolute;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 34%, #34363b, #0b0b0d 72%);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.6);
+}
+
+/* Zero-sized on purpose: makeProjector() reads their client rects to recover
+   the plinth plane's on-screen basis, so anything that gave them extent -- a
+   border, padding, a transform -- would skew the inverse and mis-scrub. */
+.studio-probe {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------------------------
+   Instrument bridge (VU meters)
+   -------------------------------------------------------------------------- */
+
+/* Hinged just inside the rear edge (its bottom sits at plinth y = 4) and folded
+   *backwards* and up. That direction is forced: a panel that leans up from a
+   rear hinge while extending forwards would end up facing the ceiling and away
+   from the reader. Overhanging the back is the only way for the meters to face
+   front. */
+.studio-bridge {
+  position: absolute;
+  left: 86px;
+  top: -104px;
+  width: 410px;
+  height: 108px;
+  transform-origin: 50% 100%;
+  transform: rotateX(-64deg);
+  transform-style: preserve-3d;
+}
+
+.studio-bridge-panel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 14px;
+  border-radius: 8px 8px 3px 3px;
+  background:
+    radial-gradient(90% 120% at 50% 0%, rgba(255, 236, 208, 0.1), transparent 60%),
+    linear-gradient(178deg, #3d4046 0%, #26282d 40%, #15161a 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.5),
+    0 18px 34px rgba(0, 0, 0, 0.5);
+}
+
+.studio-bridge-plate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 0 4px;
+  text-align: center;
+}
+
+.studio-bridge-name {
+  white-space: nowrap;
+  font-size: 0.56rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.studio-bridge-sub {
+  white-space: nowrap;
+  font-size: 0.44rem;
+  letter-spacing: 0.16em;
+  color: rgba(240, 178, 90, 0.6);
+}
+
+.studio-vu {
+  position: relative;
+  flex: none;
+  width: 120px;
+  height: 84px;
+  border-radius: 4px;
+  overflow: hidden;
+  /* Aged ivory meter card, lit from the top like a real backlit VU. */
+  background:
+    radial-gradient(78% 90% at 50% 4%, rgba(255, 242, 214, 0.96), transparent 72%),
+    linear-gradient(180deg, #e8ddc4 0%, #cfc2a4 58%, #a99b7f 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.55),
+    inset 0 -8px 14px rgba(90, 74, 46, 0.32);
+}
+
+.studio-vu-scale {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 120px;
+  height: 62px;
+  overflow: visible;
+}
+
+.studio-vu-arc {
+  fill: none;
+  stroke: rgba(38, 30, 16, 0.65);
+  stroke-width: 1.4;
+}
+
+.studio-vu-arc--hot {
+  stroke: rgba(200, 52, 38, 0.85);
+  stroke-width: 2;
+}
+
+.studio-vu-tick {
+  stroke: rgba(38, 30, 16, 0.7);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+.studio-vu-tick--hot {
+  stroke: rgba(200, 52, 38, 0.9);
+  stroke-width: 2;
+}
+
+/* The svg draws its pivot at user-space (60, 58) and the svg is pinned at the
+   meter's top-left at exactly 120x62 px, so the needle hangs from (60px, 58px).
+   Centring is done with margins because the rAF loop owns `transform` here. */
+.studio-vu-needle {
+  position: absolute;
+  left: 60px;
+  top: 58px;
+  width: 2px;
+  height: 46px;
+  margin-left: -1px;
+  margin-top: -46px;
+  transform-origin: 50% 100%;
+  border-radius: 1px 1px 0 0;
+  background: linear-gradient(180deg, #1b1712 0%, #3a3129 76%, #6d5f4d 100%);
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.35);
+  will-change: transform;
+}
+
+.studio-vu-pivot {
+  position: absolute;
+  left: 60px;
+  top: 58px;
+  width: 9px;
+  height: 9px;
+  margin: -4.5px 0 0 -4.5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 36% 32%, #6b6156, #191512 78%);
+}
+
+.studio-vu-peak {
+  position: absolute;
+  right: 11px;
+  top: 9px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  opacity: 0;
+  background: radial-gradient(circle at 40% 36%, #ff8f7a, var(--studio-red) 62%, #7a1d16);
+  box-shadow: 0 0 9px rgba(226, 84, 74, 0.9);
+  transition: opacity 0.09s linear;
+}
+
+.studio-vu-label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 5px;
+  text-align: center;
+  font-size: 0.5rem;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  color: rgba(46, 36, 20, 0.7);
+}
+
+/* --------------------------------------------------------------------------
+   Platter
+   -------------------------------------------------------------------------- */
+
+/* Inline left/top/width/height put this at PLATTER.x/y +/- PLATTER.r. */
+.studio-platter-mount {
+  position: absolute;
+  transform-style: preserve-3d;
+}
+
+/* The machined recess the platter drops into -- a hair wider than the platter,
+   so a dark rim of shadow shows all the way round. */
+.studio-platter-well {
+  position: absolute;
+  inset: -11px;
+  border-radius: 50%;
+  transform: translateZ(1px);
+  background: radial-gradient(circle at 50% 50%, #0a0b0d 0 96%, transparent 97%);
+  box-shadow:
+    inset 0 6px 14px rgba(0, 0, 0, 0.9),
+    0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+/* Eight stacked discs standing in for a turned cylinder. Deck.jsx gives each
+   its own translateZ and greyscale value; all this adds is the shape. */
+.studio-platter-slice {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+
+.studio-platter-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  transform-style: preserve-3d;
+  background:
+    /* Machined concentric turning marks, then the broad specular sweep of a
+       polished aluminium platter catching the key light. */
+    repeating-radial-gradient(
+      circle at 50% 50%,
+      rgba(255, 255, 255, 0.028) 0 1px,
+      transparent 1px 4px
+    ),
+    conic-gradient(
+      from 200deg at 50% 50%,
+      rgba(255, 255, 255, 0.13),
+      rgba(255, 255, 255, 0.02) 22%,
+      rgba(255, 255, 255, 0.1) 48%,
+      rgba(255, 255, 255, 0.015) 72%,
+      rgba(255, 255, 255, 0.13)
+    ),
+    radial-gradient(circle at 50% 50%, #3d4046 0 88%, #23252a 94%, #15161a 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.16),
+    inset 0 0 22px rgba(0, 0, 0, 0.5);
+}
+
+/* Strobe ring. Deck.jsx owns animation-duration / -direction / -play-state
+   inline (the dots lock solid at 0.0% pitch and drift either way off it), so
+   only the remaining longhands belong here -- a shorthand would be silently
+   overridden anyway and reads as a bug. */
+.studio-strobe {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  transform: translateZ(1px);
+  animation-name: studio-strobe-drift;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@keyframes studio-strobe-drift {
+  from {
+    transform: translateZ(1px) rotate(0deg);
+  }
+  to {
+    transform: translateZ(1px) rotate(360deg);
+  }
+}
+
+/* Each dot is centred on the platter's axis by its margins, then its inline
+   `rotate(a) translateY(-STROBE_R)` throws it out to the rim at that angle --
+   which also turns the dot itself radial, the way a real strobe band is. */
+.studio-strobe-dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 9px;
+  margin: -4.5px 0 0 -2px;
+  border-radius: 1px;
+  background: linear-gradient(180deg, rgba(255, 226, 180, 0.92), rgba(240, 178, 90, 0.55));
+  box-shadow: 0 0 5px rgba(240, 178, 90, 0.45);
+}
+
+.studio-slipmat {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border-radius: 50%;
+  translate: -50% -50%;
+  transform: translateZ(2px);
+  /* Felt: matte, faintly fibrous, with a screen-printed ring near the edge. */
+  background:
+    repeating-conic-gradient(
+      from 0deg at 50% 50%,
+      rgba(255, 255, 255, 0.014) 0deg 0.9deg,
+      transparent 0.9deg 2.1deg
+    ),
+    radial-gradient(circle at 50% 50%, transparent 0 88%, rgba(240, 178, 90, 0.22) 88.4% 89.6%, transparent 90%),
+    radial-gradient(circle at 38% 30%, #2b2c31 0%, #1b1c20 52%, #101115 100%);
+  box-shadow: inset 0 0 26px rgba(0, 0, 0, 0.6);
+}
+
+/* --- the record ---------------------------------------------------------- */
+
+/* Centred with `translate` rather than `transform`, because index.jsx animates
+   `transform` outright with the Web Animations API to fly the record in from
+   the crate; a translate(-50%,-50%) in that property would be discarded for the
+   whole flight and the disc would jump to the platter's top-left corner.
+   The resting height, by contrast, has to stay in `transform` (Deck.jsx writes
+   it inline) -- index.jsx's DISC_REST_Z carries the same lift through every
+   keyframe so the flight never sinks below the slipmat. */
+.studio-disc-mount {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.studio-disc {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  /* record.color is the inline background; these sit on top of it. */
+  box-shadow:
+    0 10px 22px rgba(0, 0, 0, 0.6),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.09);
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.studio-disc.is-spinning {
+  animation-name: studio-spin;
+}
+
+@keyframes studio-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.studio-disc-grooves {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    repeating-radial-gradient(
+      circle at 50% 50%,
+      rgba(0, 0, 0, 0.4) 0 1px,
+      rgba(255, 255, 255, 0.045) 1px 2px,
+      transparent 2px 3px
+    ),
+    radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0.55) 0 34%, transparent 36%),
+    radial-gradient(circle at 50% 50%, transparent 0 92%, rgba(255, 255, 255, 0.12) 94%, transparent 96%),
+    linear-gradient(0deg, rgba(0, 0, 0, 0.62), rgba(0, 0, 0, 0.62));
+}
+
+/* Counter-rotated at exactly the disc's own speed so the specular band stays
+   put under the key light while the record turns beneath it. `inherit` is the
+   only way to reach the duration -- it is written inline on the parent. */
+.studio-disc-sheen {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 186deg at 50% 50%,
+    rgba(255, 255, 255, 0.22),
+    rgba(255, 255, 255, 0) 16%,
+    rgba(255, 255, 255, 0.09) 46%,
+    rgba(255, 255, 255, 0) 64%,
+    rgba(255, 255, 255, 0.2)
+  );
+  mix-blend-mode: screen;
+  opacity: 0.65;
+  animation-name: none;
+  animation-duration: inherit;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  animation-direction: reverse;
+}
+
+.studio-disc.is-spinning .studio-disc-sheen {
+  animation-name: studio-spin;
+}
+
+.studio-disc-label {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 96px;
+  height: 96px;
+  margin: -48px 0 0 -48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 8px;
+  border-radius: 50%;
+  text-align: center;
+  background:
+    radial-gradient(circle at 50% 50%, #101115 0 6px, transparent 7px),
+    radial-gradient(circle at 38% 28%, #f3e7cf, #d8c49b 62%, #b39d72 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.35),
+    0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.studio-disc-label em {
+  font-style: normal;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #221c12;
+  margin-top: 14px;
+}
+
+.studio-disc-label i {
+  font-style: normal;
+  font-size: 0.46rem;
+  letter-spacing: 0.2em;
+  color: rgba(34, 28, 18, 0.62);
+}
+
+.studio-spindle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 28%, #ffffff, #9aa0a8 46%, #4a4e55 100%);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.65);
+}
+
+/* --------------------------------------------------------------------------
+   Tonearm
+   -------------------------------------------------------------------------- */
+
+/* Zero-sized node pinned to PIVOT. Everything that swings hangs off it, so the
+   rotor's rotation is around exactly the pivot geometry.js computes from. */
+.studio-arm-mount {
+  position: absolute;
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+}
+
+.studio-arm-collar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 54px;
+  height: 54px;
+  margin: -27px 0 0 -27px;
+  border-radius: 50%;
+  transform: translateZ(6px);
+  background:
+    conic-gradient(
+      from 150deg at 50% 50%,
+      #6d727a,
+      #2c2f35 26%,
+      #7d838c 52%,
+      #33363c 76%,
+      #6d727a
+    );
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.55),
+    0 6px 14px rgba(0, 0, 0, 0.55);
+}
+
+.studio-arm-post {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 30px;
+  height: 30px;
+  margin: -15px 0 0 -15px;
+  border-radius: 50%;
+  transform: translateZ(46px);
+  background: radial-gradient(circle at 36% 30%, #eceff3, #8b9199 40%, #3a3e45 100%);
+  box-shadow: 0 10px 18px rgba(0, 0, 0, 0.55);
+}
+
+/* transform-origin must stay at the pivot: Deck.jsx writes the whole transform
+   (`translateZ(52px) rotate(<angle>deg)`) inline, and the angle it writes is
+   measured about PIVOT in plinth space. */
+.studio-arm-rotor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  transform-origin: 0 0;
+  transform-style: preserve-3d;
+  /* ontimeupdate lands roughly every 250ms; a matched linear transition turns
+     that staircase into a steady creep across the record. */
+  transition: transform 0.26s linear, translate 0.3s cubic-bezier(0.2, 0.8, 0.25, 1);
+}
+
+/* Following a finger: no smoothing, or the arm lags the pointer. */
+.studio-arm-rotor.is-dragging {
+  transition: translate 0.3s cubic-bezier(0.2, 0.8, 0.25, 1);
+}
+
+/* Cueing. Lifting has to use the independent `translate` property for the same
+   reason the record does -- `transform` is spoken for by the inline angle. */
+.studio-arm-rotor.is-lifted {
+  translate: 0 0 15px;
+}
+
+/* viewBox="-120 -60 420 120" at exactly 420x120px offset by (-120, -60) puts
+   svg user unit (0,0) on the pivot at 1 unit = 1 plinth pixel, which is what
+   lets the path literal `M 0 0 ... ARM_LENGTH 6` land the headshell correctly. */
+.studio-arm-tube {
+  position: absolute;
+  left: -120px;
+  top: -60px;
+  width: 420px;
+  height: 120px;
+  overflow: visible;
+  pointer-events: none;
+  filter: drop-shadow(0 7px 6px rgba(0, 0, 0, 0.5));
+}
+
+.studio-arm-path {
+  fill: none;
+  stroke-width: 9;
+  stroke-linecap: round;
+}
+
+.studio-arm-gloss {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.55);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+.studio-arm-stub {
+  fill: #4c5057;
+  stroke: rgba(0, 0, 0, 0.5);
+  stroke-width: 1;
+}
+
+.studio-counterweight {
+  position: absolute;
+  left: -86px;
+  top: 0;
+  width: 46px;
+  height: 40px;
+  margin: -20px 0 0 -23px;
+  border-radius: 12px / 20px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.4), transparent 34%),
+    repeating-linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.22) 0 1px,
+      transparent 1px 6px
+    ),
+    linear-gradient(180deg, #55595f 0%, #2a2d32 56%, #131417 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.5),
+    0 8px 14px rgba(0, 0, 0, 0.55);
+}
+
+.studio-antiskate {
+  position: absolute;
+  left: -34px;
+  top: 26px;
+  width: 15px;
+  height: 15px;
+  margin: -7.5px 0 0 -7.5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 36% 30%, #e6e9ed, #7d838c 46%, #33363c 100%);
+  box-shadow: 0 3px 7px rgba(0, 0, 0, 0.5);
+}
+
+/* The drag handle. Centred on (ARM_LENGTH, 3) in rotor-local pixels -- 3px of
+   droop to meet the tube's own end point -- with `translate` again reserved for
+   centring so the hover/press feedback can use `transform`.
+   touch-action:none is what makes this draggable on a phone at all: without it
+   the browser claims the gesture as a scroll before the pointermove handlers
+   ever see it. */
+.studio-headshell {
+  position: absolute;
+  top: 3px;
+  width: 46px;
+  height: 30px;
+  translate: -50% -50%;
+  transform-style: preserve-3d;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.16s ease;
+}
+
+/* Fat invisible target so a fingertip can find it; the visible headshell stays
+   the size a headshell should be. */
+.studio-headshell::before {
+  content: "";
+  position: absolute;
+  inset: -16px;
+}
+
+.studio-headshell:active {
+  cursor: grabbing;
+}
+
+.studio-headshell:hover,
+.studio-headshell:active {
+  transform: scale(1.06);
+}
+
+.studio-headshell:focus-visible {
+  outline: 2px solid var(--studio-amber);
+  outline-offset: 6px;
+  border-radius: 4px;
+}
+
+.studio-headshell-body {
+  position: absolute;
+  left: 4px;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 4px 6px 6px 4px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.45), transparent 30%),
+    linear-gradient(168deg, #d9dde3 0%, #9aa0a8 34%, #4b4f56 74%, #212328 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.45),
+    0 8px 14px rgba(0, 0, 0, 0.55);
+}
+
+.studio-headshell-finger {
+  position: absolute;
+  right: -13px;
+  top: 50%;
+  width: 16px;
+  height: 9px;
+  margin-top: -4.5px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #cfd4da 0%, #6b7078 46%, #33363c 100%);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.5);
+}
+
+.studio-cartridge {
+  position: absolute;
+  left: 8px;
+  right: 6px;
+  top: 50%;
+  height: 15px;
+  margin-top: -3px;
+  border-radius: 2px;
+  transform: translateZ(-11px);
+  background: linear-gradient(180deg, #2b2b30 0%, #17171b 62%, #0b0b0e 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+/* Reaches down to the record's own plane so the stylus visibly meets the
+   groove rather than hovering above it. */
+.studio-stylus {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 3px;
+  height: 3px;
+  margin: -1.5px 0 0 -1.5px;
+  border-radius: 50%;
+  transform: translateZ(-25px);
+  background: var(--studio-amber-hot);
+  box-shadow: 0 0 8px rgba(255, 208, 138, 0.85);
+}
+
+/* Placed by Deck.jsx at exactly where the parked arm's stylus lands, so the
+   arm settles onto the rest instead of near it. */
+.studio-arm-rest {
+  position: absolute;
+  width: 40px;
+  height: 22px;
+  margin: -11px 0 0 -20px;
+  border-radius: 4px;
+  transform: translateZ(30px);
+  background: linear-gradient(180deg, #4e525a 0%, #2a2d32 52%, #141519 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 8px 16px rgba(0, 0, 0, 0.55);
+}
+
+.studio-arm-rest::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -5px;
+  width: 22px;
+  height: 10px;
+  margin-left: -11px;
+  border-radius: 5px 5px 0 0;
+  background: linear-gradient(180deg, #16171b, #2c2f35);
+}
+
+/* --------------------------------------------------------------------------
+   Front panel controls (on the plinth)
+   -------------------------------------------------------------------------- */
+
+/* Tucked into the strip of plinth in front of the platter (which ends at
+   y = 366) and clear of both the arm rest at (395, 323) and the fader at
+   x = 512. */
+.studio-panel {
+  position: absolute;
+  left: 26px;
+  top: 376px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 44px;
+  transform: translateZ(3px);
+}
+
+.studio-power {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.82rem;
+  background: radial-gradient(circle at 38% 30%, #4d5158, #22242a 62%, #101115 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 6px 12px rgba(0, 0, 0, 0.5);
+  transition: color 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
+}
+
+.studio-power:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.studio-power:not(:disabled):active {
+  transform: translateY(1px);
+}
+
+.studio-power.is-on {
+  color: var(--studio-amber-hot);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 6px 12px rgba(0, 0, 0, 0.5),
+    0 0 18px rgba(240, 178, 90, 0.45);
+}
+
+.studio-power:focus-visible {
+  outline: 2px solid var(--studio-amber);
+  outline-offset: 3px;
+}
+
+.studio-power-ring {
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  border: 1px solid rgba(240, 178, 90, 0.22);
+  opacity: 0.4;
+  pointer-events: none;
+  transition: opacity 0.25s ease, border-color 0.25s ease;
+}
+
+.studio-power.is-on .studio-power-ring {
+  opacity: 1;
+  border-color: rgba(240, 178, 90, 0.7);
+  animation: studio-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes studio-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(240, 178, 90, 0.34);
+  }
+  50% {
+    box-shadow: 0 0 0 7px rgba(240, 178, 90, 0);
+  }
+}
+
+.studio-speeds {
+  display: flex;
+  gap: 6px;
+}
+
+.studio-key {
+  min-width: 40px;
+  height: 30px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.5);
+  background: linear-gradient(180deg, #494d54 0%, #2b2e34 46%, #17181c 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.55),
+    0 4px 8px rgba(0, 0, 0, 0.5);
+  transition: color 0.18s ease, box-shadow 0.18s ease, transform 0.09s ease;
+}
+
+.studio-key:disabled {
+  cursor: default;
+  opacity: 0.38;
+}
+
+.studio-key:not(:disabled):hover {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.studio-key:not(:disabled):active {
+  transform: translateY(1px);
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.7),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.6);
+}
+
+.studio-key:focus-visible {
+  outline: 2px solid var(--studio-amber);
+  outline-offset: 2px;
+}
+
+.studio-key.is-on {
+  color: #121317;
+  background: linear-gradient(180deg, var(--studio-amber-hot) 0%, var(--studio-amber) 52%, #c98a37 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 0 14px rgba(240, 178, 90, 0.4);
+}
+
+.studio-key--cue {
+  margin-left: 4px;
+}
+
+.studio-key--eject {
+  min-width: 34px;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+/* --------------------------------------------------------------------------
+   Pitch fader
+   -------------------------------------------------------------------------- */
+
+/* Inline left = FADER.x (a centre line) and top = FADER.y0 - 18, so the 18px of
+   headroom at each end is baked into the tick and knob offsets Deck.jsx writes.
+   Only the horizontal centring is CSS's business. */
+.studio-fader {
+  position: absolute;
+  width: 62px;
+  translate: -50% 0 3px;
+}
+
+.studio-fader-slot {
+  position: absolute;
+  left: 50%;
+  top: 18px;
+  width: 12px;
+  translate: -50% 0;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #0a0b0d, #1c1e22 42%, #0a0b0d);
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.9),
+    0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+/* The detent line at 0.0%: the whole point of a pitch fader is finding it
+   without looking. */
+.studio-fader-centre {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 34px;
+  height: 2px;
+  margin: -1px 0 0 -17px;
+  border-radius: 1px;
+  background: linear-gradient(90deg, transparent, rgba(240, 178, 90, 0.85), transparent);
+}
+
+.studio-fader-tick {
+  position: absolute;
+  left: 50%;
+  width: 11px;
+  height: 1px;
+  margin-left: 10px;
+  translate: 0 -50%;
+  background: rgba(255, 255, 255, 0.34);
+}
+
+.studio-fader-tick.is-zero {
+  width: 16px;
+  height: 2px;
+  background: rgba(240, 178, 90, 0.8);
+}
+
+/* Positioned by an inline `top` derived from the pitch value; `translate` does
+   the centring so `transform` stays free for the held state. */
+.studio-fader-knob {
+  position: absolute;
+  left: 50%;
+  width: 46px;
+  height: 24px;
+  translate: -50% -50%;
+  border-radius: 4px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.42), transparent 26%),
+    repeating-linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.28) 0 1px,
+      transparent 1px 4px
+    ),
+    linear-gradient(180deg, #585d64 0%, #34373d 48%, #16171b 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 7px 13px rgba(0, 0, 0, 0.6);
+  transition: transform 0.12s ease, box-shadow 0.2s ease;
+}
+
+.studio-fader-knob::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: 50%;
+  height: 2px;
+  margin-top: -1px;
+  border-radius: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.72), transparent);
+}
+
+/* Same fingertip allowance as the headshell. */
+.studio-fader-knob::after {
+  content: "";
+  position: absolute;
+  inset: -14px -10px;
+}
+
+.studio-fader-knob:hover,
+.studio-fader-knob.is-held {
+  transform: scale(1.05);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 9px 18px rgba(0, 0, 0, 0.65),
+    0 0 16px rgba(240, 178, 90, 0.28);
+}
+
+.studio-fader-knob.is-held {
+  cursor: grabbing;
+}
+
+.studio-fader-knob:focus-visible {
+  outline: 2px solid var(--studio-amber);
+  outline-offset: 4px;
+}
+
+.studio-fader-caption {
+  position: absolute;
+  left: 50%;
+  bottom: -16px;
+  translate: -50% 0;
+  white-space: nowrap;
+  font-size: 0.46rem;
+  letter-spacing: 0.26em;
+  color: rgba(255, 255, 255, 0.34);
+}
+
+/* --------------------------------------------------------------------------
+   Liner notes panel -- the actual content of the site
+   -------------------------------------------------------------------------- */
+
+.studio-liner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: clamp(20px, 2.4vw, 30px);
+  border-radius: 16px;
+  border: 1px solid var(--studio-line);
+  background: var(--studio-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 26px 60px rgba(0, 0, 0, 0.5);
+}
+
+.studio-liner-head {
+  border-bottom: 1px solid var(--studio-line);
+  padding-bottom: 16px;
+}
+
+.studio-liner-kicker {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.58rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--studio-amber);
+}
+
+.studio-liner-head h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.studio-liner-track {
+  margin: 6px 0 0;
+  font-size: 0.78rem;
+  color: var(--studio-dim);
+}
+
+.studio-spec {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.studio-spec > div {
+  padding: 9px 10px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.studio-spec dt {
+  font-size: 0.53rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--studio-faint);
+}
+
+.studio-spec dd {
+  margin: 5px 0 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Locked to 0.0%: the strobe is standing still, and the readout says so. */
+.studio-spec dd.is-locked {
+  color: var(--studio-amber);
+}
+
+.studio-transport {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.studio-transport-keys {
+  display: flex;
+  gap: 8px;
+}
+
+.studio-tkey {
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--studio-ink);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease,
+    transform 0.09s ease;
+}
+
+.studio-tkey:not(:disabled):hover {
+  border-color: rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.studio-tkey:not(:disabled):active {
+  transform: translateY(1px);
+}
+
+.studio-tkey:disabled {
+  cursor: default;
+  opacity: 0.34;
+}
+
+.studio-tkey.is-on {
+  border-color: rgba(240, 178, 90, 0.6);
+  color: var(--studio-amber-hot);
+  background: rgba(240, 178, 90, 0.14);
+}
+
+.studio-tkey:focus-visible {
+  outline: 2px solid var(--studio-amber);
+  outline-offset: 2px;
+}
+
+.studio-meter {
+  position: relative;
+  height: 5px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.09);
+}
+
+/* Deck-side seeking writes an inline scaleX; the origin has to be the left edge
+   or the bar would grow out of its middle. */
+.studio-meter-fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 50%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--studio-amber), var(--studio-amber-hot));
+  box-shadow: 0 0 10px rgba(240, 178, 90, 0.5);
+  transition: transform 0.26s linear;
+}
+
+.studio-times {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--studio-dim);
+}
+
+.studio-times-hint {
+  flex: 1 1 auto;
+  text-align: center;
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--studio-faint);
+}
+
+/* Content. Legibility beats styling here -- this is the site. */
+.studio-liner-body {
+  font-size: 0.92rem;
+  line-height: 1.68;
+  color: rgba(238, 235, 228, 0.86);
+}
+
+.studio-liner-body p {
+  margin: 0 0 0.9em;
+}
+
+.studio-liner-body p:last-child {
+  margin-bottom: 0;
+}
+
+.studio-liner-body ul {
+  margin: 0.6em 0;
+}
+
+.studio-liner-body li {
+  margin-bottom: 0.9em;
+}
+
+.studio-liner-body strong {
+  color: #fff;
+  font-weight: 600;
+}
+
+.studio-liner-body a {
+  color: var(--studio-amber-hot);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(255, 208, 138, 0.34);
+  transition: border-color 0.18s ease, color 0.18s ease;
+}
+
+.studio-liner-body a:hover {
+  color: #fff;
+  border-bottom-color: #fff;
+}
+
+.studio-liner-body a:focus-visible {
+  outline: 2px solid var(--studio-amber);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
+.studio-liner-body img,
+.studio-liner-body .project-screenshot {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  margin: 0.7em 0;
+  border-radius: 10px;
+  border: 1px solid var(--studio-line);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
+}
+
+/* --------------------------------------------------------------------------
+   Responsive. The scene is one fixed-size drawing scaled as a unit, so the
+   breakpoints only ever change --studio-scale (and, once, the stage's aspect
+   and where the crate sits).
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 1440px) {
+  .studio-root {
+    --studio-scale: 0.7;
+  }
+}
+
+@media (max-width: 1300px) {
+  .studio-root {
+    --studio-scale: 0.62;
+  }
+}
+
+@media (max-width: 1180px) {
+  .studio-root {
+    --studio-scale: 0.56;
+  }
+}
+
+@media (max-width: 1080px) {
+  .studio-root {
+    --studio-scale: 0.8;
+  }
+
+  .studio-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .studio-root {
+    --studio-scale: 0.68;
+  }
+}
+
+/* Phone: the crate can't sit beside the deck any more, so it goes underneath it
+   and the stage grows taller instead of wider. */
+@media (max-width: 780px) {
+  .studio-root {
+    --studio-stage-w: 640px;
+    --studio-stage-h: 900px;
+    --studio-scale: 0.86;
+  }
+
+  .studio-deck {
+    left: 50%;
+    top: 31%;
+  }
+
+  .studio-rack {
+    left: 50%;
+    top: 79%;
+    width: 560px;
+    height: 300px;
+    transform: rotateY(6deg) rotateX(3deg);
+  }
+
+  .studio-rack-slots {
+    gap: 16px;
+  }
+
+  .studio-sleeve {
+    min-height: 62px;
+  }
+
+  .studio-spec {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .studio-root {
+    --studio-scale: 0.8;
+  }
+}
+
+@media (max-width: 540px) {
+  .studio-root {
+    --studio-scale: 0.7;
+  }
+}
+
+@media (max-width: 470px) {
+  .studio-root {
+    --studio-scale: 0.6;
+  }
+}
+
+@media (max-width: 400px) {
+  .studio-root {
+    --studio-scale: 0.53;
+  }
+}
+
+@media (max-width: 370px) {
+  .studio-root {
+    --studio-scale: 0.48;
+  }
+}
+
+/* Coarse pointer: nothing here is hover-only, but the two drag handles get
+   bigger targets and the hover-scale is dropped so a tap doesn't leave them
+   stuck enlarged. */
+@media (hover: none) {
+  .studio-headshell::before {
+    inset: -22px;
+  }
+
+  .studio-fader-knob::after {
+    inset: -20px -16px;
+  }
+
+  .studio-headshell:hover,
+  .studio-fader-knob:hover {
+    transform: none;
+  }
+
+  .studio-sleeve:hover {
+    transform: translateZ(calc(var(--sleeve-i, 0) * -7px)) rotateY(calc(var(--sleeve-i, 0) * -1.6deg));
+  }
+}
+
+/* Keep the object, drop the perpetual motion: the deck still reads as a solid
+   thing in 3D, it just stops running. index.jsx independently shortens the
+   record's flight and skips the parallax. */
+@media (prefers-reduced-motion: reduce) {
+  .studio-dust span,
+  .studio-strobe,
+  .studio-disc,
+  .studio-disc-sheen,
+  .studio-power.is-on .studio-power-ring {
+    animation: none !important;
+  }
+
+  .studio-sleeve,
+  .studio-arm-rotor,
+  .studio-meter-fill,
+  .studio-headshell,
+  .studio-fader-knob {
+    transition-duration: 0.001s;
+  }
+}

@@ -1,0 +1,140 @@
+/* Sits above every variant's scene, including the ones that build their own 3D
+   stacking contexts -- hence the very high z-index. */
+.variant-switcher {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 9000;
+  font-family: inherit;
+  text-align: left;
+}
+
+.variant-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(18, 18, 22, 0.72);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: #fff;
+  font-size: 0.85rem;
+  cursor: pointer;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.45);
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.variant-trigger:hover,
+.variant-trigger.open {
+  border-color: rgba(255, 255, 255, 0.34);
+  background: rgba(28, 28, 34, 0.86);
+}
+
+.variant-trigger:focus-visible {
+  outline: 2px solid #00b881;
+  outline-offset: 3px;
+}
+
+.variant-trigger-label {
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  opacity: 0.5;
+}
+
+.variant-trigger-name {
+  font-weight: 600;
+}
+
+.variant-caret {
+  width: 11px;
+  height: 8px;
+  opacity: 0.6;
+  transition: transform 0.2s ease;
+}
+
+.variant-trigger.open .variant-caret {
+  transform: rotate(180deg);
+}
+
+.variant-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 268px;
+  max-width: calc(100vw - 32px);
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(16, 16, 20, 0.94);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.6);
+  animation: variantMenuIn 0.16s ease-out;
+}
+
+@keyframes variantMenuIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.variant-option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 9px 11px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.variant-option:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.variant-option:focus-visible {
+  outline: 2px solid #00b881;
+  outline-offset: -2px;
+}
+
+.variant-option.selected {
+  background: rgba(0, 184, 129, 0.16);
+}
+
+.variant-option-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.variant-option-tagline {
+  font-size: 0.72rem;
+  opacity: 0.55;
+}
+
+@media (max-width: 480px) {
+  .variant-switcher {
+    top: 10px;
+    right: 10px;
+  }
+
+  .variant-trigger {
+    padding: 7px 12px;
+    font-size: 0.8rem;
+  }
+}
