@@ -15,12 +15,11 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
   const [dropActive, setDropActive] = useState(false);
   const [vinylOnPlayer, setVinylOnPlayer] = useState(null);
   const [isEjecting, setIsEjecting] = useState(false);
-  const [snapOffset, setSnapOffset] = useState(null);
-  const [snapInstant, setSnapInstant] = useState(false);
-  const [snapReturning, setSnapReturning] = useState(false);
+  const [isFlyingBack, setIsFlyingBack] = useState(false);
   const [isEntering, setIsEntering] = useState(false);
   const audioRef = useRef(null);
   const fadeIntervalRef = useRef(null);
+  const vinylElRef = useRef(null);
 
   useEffect(() => {
     if (currentTrack) {
@@ -165,46 +164,61 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
     }
   };
 
-  const ejectVinyl = (dragEndOffset = null, snapTarget = { x: 0, y: 0 }) => {
+  const clearPlayer = () => {
+    setCurrentTrack(null);
+    setCurrentTrackTitle(null);
+    setVinylOnPlayer(null);
+    onVinylChange(null);
+    setTrackProgress(0);
+    setNowPlaying("No track selected");
+    setIsEjecting(false);
+    setIsFlyingBack(false);
+  };
+
+  const stopAudioForEject = () => {
+    if (!audioRef.current) return;
+    fadeOut(audioRef.current, 0.1, () => {
+      audioRef.current.pause();
+      audioRef.current.src = "";
+      audioRef.current.load();
+      setIsPlaying(false);
+    });
+  };
+
+  const ejectVinyl = () => {
     if (!vinylOnPlayer) return;
+    stopAudioForEject();
+    setIsEjecting(true);
+    setTimeout(clearPlayer, 500);
+  };
 
-    if (dragEndOffset) {
-      // Snap back to its slot in the menu immediately from wherever it was
-      // dropped, decoupled from the audio fade timing below.
-      setSnapOffset(dragEndOffset);
-      setSnapInstant(true);
-      setSnapReturning(false);
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          setSnapInstant(false);
-          setSnapReturning(true);
-          setSnapOffset(snapTarget);
-        });
-      });
-    }
+  // Drag-off gets its own animation: fly from wherever it was dropped back to
+  // its slot in the vinyl menu. Uses the Web Animations API rather than
+  // toggling CSS classes across rAF ticks -- the from/to keyframes are declared
+  // in one call, so it can't half-apply if a frame is dropped or the tab isn't
+  // actively rendering.
+  const ejectVinylByDrag = (dropOffset, snapTarget) => {
+    if (!vinylOnPlayer) return;
+    stopAudioForEject();
 
-    if (audioRef.current) {
-      fadeOut(audioRef.current, 0.1, () => {
-        audioRef.current.pause();
-        audioRef.current.src = "";
-        audioRef.current.load();
-        setIsPlaying(false);
-        if (!dragEndOffset) {
-          setIsEjecting(true);
-        }
-        setTimeout(() => {
-          setCurrentTrack(null);
-          setCurrentTrackTitle(null);
-          setVinylOnPlayer(null);
-          onVinylChange(null);
-          setTrackProgress(0);
-          setNowPlaying("No track selected");
-          setIsEjecting(false);
-          setSnapOffset(null);
-          setSnapInstant(false);
-          setSnapReturning(false);
-        }, 500);
-      });
+    const el = vinylElRef.current;
+    if (el) {
+      setIsFlyingBack(true);
+      const animation = el.animate(
+        [
+          { transform: `translate(${dropOffset.x}px, ${dropOffset.y}px) scale(1)`, opacity: 0.6 },
+          { transform: `translate(${snapTarget.x}px, ${snapTarget.y}px) scale(0.5)`, opacity: 0 },
+        ],
+        { duration: 450, easing: "cubic-bezier(0.4, 0, 0.2, 1)", fill: "forwards" }
+      );
+      animation.onfinish = clearPlayer;
+      // Fallback in case onfinish never fires (e.g. animation cancelled by an
+      // unmount) so the player can't get stuck holding a vinyl.
+      setTimeout(() => {
+        if (vinylOnPlayer) clearPlayer();
+      }, 700);
+    } else {
+      setTimeout(clearPlayer, 500);
     }
   };
 
@@ -225,10 +239,10 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
         ? { x: dropPoint.x - startPoint.x, y: dropPoint.y - startPoint.y }
         : { x: 0, y: 0 };
 
-      // Find where this vinyl's actual slot in the menu is, so the snap-back
-      // can return there instead of just to the player's own center.
+      // Find where this vinyl's actual slot in the menu is, so it flies back
+      // there rather than just to the player's own center.
       let snapTarget = { x: 0, y: 0 };
-      const playerVinylEl = document.querySelector(".vinyl-on-player");
+      const playerVinylEl = vinylElRef.current;
       const menuSlot = [...document.querySelectorAll(".vinyl-wrapper")]
         .find((w) => w.querySelector(".vinyl-hint")?.textContent === vinylOnPlayer?.title);
       const menuVinylEl = menuSlot?.querySelector(".vinyl-record");
@@ -241,7 +255,7 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
         };
       }
 
-      ejectVinyl(dropOffset, snapTarget);
+      ejectVinylByDrag(dropOffset, snapTarget);
     },
     collect: (monitor) => ({ isDraggingOff: !!monitor.isDragging() }),
   }), [vinylOnPlayer]);
@@ -292,16 +306,12 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
         {/* Vinyl overlay on the player */}
         {vinylOnPlayer && (
           <div
-            ref={dragOff}
-            className={`vinyl-on-player ${isEntering ? "entering" : ""} ${isPlaying && !isEjecting && !snapOffset ? "spinning" : ""} ${isEjecting ? "ejecting" : ""} ${isDraggingOff ? "dragging-off" : ""}`}
-            style={{
-              background: getVinylColor(vinylOnPlayer.title),
-              ...(snapOffset ? {
-                transform: `translate(${snapOffset.x}px, ${snapOffset.y}px)`,
-                opacity: snapReturning ? 0 : 0.4,
-                transition: snapInstant ? "none" : undefined,
-              } : {})
+            ref={(node) => {
+              vinylElRef.current = node;
+              dragOff(node);
             }}
+            className={`vinyl-on-player ${isEntering ? "entering" : ""} ${isPlaying && !isEjecting && !isFlyingBack ? "spinning" : ""} ${isEjecting ? "ejecting" : ""} ${isDraggingOff ? "dragging-off" : ""}`}
+            style={{ background: getVinylColor(vinylOnPlayer.title) }}
           >
             <div className="vinyl-grooves"></div>
           </div>
