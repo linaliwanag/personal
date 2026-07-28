@@ -12,6 +12,9 @@ node_modules/
 # production
 /build
 
+# local dev-server launch config (hardcodes a machine-specific node path)
+.claude/launch.json
+
 # misc
 .DS_Store
 .env.local

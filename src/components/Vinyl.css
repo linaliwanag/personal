@@ -36,6 +36,11 @@
   cursor: grabbing;
 }
 
+/* Dimmed placeholder shown while this record is sitting on the player. It is
+   also the landing pad for the eject animation: RecordPlayer measures this
+   element's live rect and opacity and flies the record back onto it, then hands
+   off by unmounting the flying copy as this class comes off. Changing these
+   values is safe -- the flight is measured at runtime, not hardcoded. */
 .vinyl-record.on-player {
   opacity: 0.3;
   transform: scale(0.8);

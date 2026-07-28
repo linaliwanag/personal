@@ -5,6 +5,11 @@ import "./RecordPlayer.css";
 
 import Content from "./Content";
 
+// How long the record takes to travel back to its slot in the menu. The button
+// eject gets a little longer because it also plays the lift-off beat first.
+const EJECT_FLIGHT_MS = 560;
+const DRAG_FLIGHT_MS = 420;
+
 const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
   const [currentTrack, setCurrentTrack] = useState(null);
   const [currentTrackTitle, setCurrentTrackTitle] = useState(null);
@@ -14,12 +19,13 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
   const [nowPlaying, setNowPlaying] = useState("No track selected");
   const [dropActive, setDropActive] = useState(false);
   const [vinylOnPlayer, setVinylOnPlayer] = useState(null);
-  const [isEjecting, setIsEjecting] = useState(false);
-  const [isFlyingBack, setIsFlyingBack] = useState(false);
+  const [isReturning, setIsReturning] = useState(false);
   const [isEntering, setIsEntering] = useState(false);
   const audioRef = useRef(null);
   const fadeIntervalRef = useRef(null);
   const vinylElRef = useRef(null);
+  const isReturningRef = useRef(false);
+  const flightTimeoutRef = useRef(null);
 
   useEffect(() => {
     if (currentTrack) {
@@ -73,7 +79,7 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
     if (!vinylOnPlayer) return;
     // Scoped to its own class + timed removal (rather than left as a permanent
     // property of .vinyl-on-player) so it can't restart later just because some
-    // other class (like .ejecting) toggles on the same element -- CSS animations
+    // other class (like .returning) toggles on the same element -- CSS animations
     // take priority over transitions on the same property and will hijack them.
     setIsEntering(true);
     const timer = setTimeout(() => setIsEntering(false), 500);
@@ -171,8 +177,7 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
     onVinylChange(null);
     setTrackProgress(0);
     setNowPlaying("No track selected");
-    setIsEjecting(false);
-    setIsFlyingBack(false);
+    setIsReturning(false);
   };
 
   const stopAudioForEject = () => {
@@ -185,42 +190,117 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
     });
   };
 
-  const ejectVinyl = () => {
-    if (!vinylOnPlayer) return;
-    stopAudioForEject();
-    setIsEjecting(true);
-    setTimeout(clearPlayer, 500);
+  // Measures the record's home slot in the menu. Returns the delta from the
+  // player vinyl's centre to the slot's centre, plus the scale and opacity the
+  // slot is *currently rendered at* -- while a record is on the player its menu
+  // slot sits there dimmed and shrunk. Landing the flying record on exactly
+  // those values means it and the menu slot are pixel-identical at the moment
+  // of hand-off, so unmounting one and un-dimming the other is invisible.
+  const measureHomeSlot = () => {
+    const playerVinylEl = vinylElRef.current;
+    const menuVinylEl = vinylOnPlayer
+      ? document.querySelector(`.vinyl-record[data-vinyl-title="${CSS.escape(vinylOnPlayer.title)}"]`)
+      : null;
+    if (!playerVinylEl || !menuVinylEl) return null;
+
+    const playerRect = playerVinylEl.getBoundingClientRect();
+    const slotRect = menuVinylEl.getBoundingClientRect();
+    // We measure while the record is still spinning, and a rotated square's
+    // bounding box is up to ~1.41x its real width -- so the scale has to come
+    // from offsetWidth, which ignores transforms. Centres are safe to take from
+    // the rects: rotation is about the centre, so it doesn't move.
+    const playerWidth = playerVinylEl.offsetWidth;
+    if (!playerWidth || !slotRect.width) return null;
+
+    return {
+      x: (slotRect.left + slotRect.width / 2) - (playerRect.left + playerRect.width / 2),
+      y: (slotRect.top + slotRect.height / 2) - (playerRect.top + playerRect.height / 2),
+      scale: slotRect.width / playerWidth,
+      opacity: Number(window.getComputedStyle(menuVinylEl).opacity) || 1,
+    };
   };
 
-  // Drag-off gets its own animation: fly from wherever it was dropped back to
-  // its slot in the vinyl menu. Uses the Web Animations API rather than
-  // toggling CSS classes across rAF ticks -- the from/to keyframes are declared
-  // in one call, so it can't half-apply if a frame is dropped or the tab isn't
-  // actively rendering.
-  const ejectVinylByDrag = (dropOffset, snapTarget) => {
-    if (!vinylOnPlayer) return;
+  const finishFlight = () => {
+    if (!isReturningRef.current) return;
+    isReturningRef.current = false;
+    clearTimeout(flightTimeoutRef.current);
+    flightTimeoutRef.current = null;
+    clearPlayer();
+  };
+
+  // The single eject animation, shared by the Eject button and the drag-off.
+  // `from` is where the record starts relative to its resting spot on the
+  // player -- {0,0} for the button, the drag delta for a drag-off -- so a
+  // dragged record picks the flight up from exactly where it was dropped
+  // instead of snapping back to the platter first.
+  //
+  // Uses the Web Animations API rather than toggling CSS classes across rAF
+  // ticks: the whole from/to path is declared in one call, so it can't
+  // half-apply if a frame is dropped or the tab isn't actively rendering.
+  const flyHome = (from, { duration, liftOff }) => {
+    if (!vinylOnPlayer || isReturningRef.current) return;
+    isReturningRef.current = true;
     stopAudioForEject();
+    setIsReturning(true);
 
     const el = vinylElRef.current;
-    if (el) {
-      setIsFlyingBack(true);
-      const animation = el.animate(
-        [
-          { transform: `translate(${dropOffset.x}px, ${dropOffset.y}px) scale(1)`, opacity: 0.6 },
-          { transform: `translate(${snapTarget.x}px, ${snapTarget.y}px) scale(0.5)`, opacity: 0 },
-        ],
-        { duration: 450, easing: "cubic-bezier(0.4, 0, 0.2, 1)", fill: "forwards" }
-      );
-      animation.onfinish = clearPlayer;
-      // Fallback in case onfinish never fires (e.g. animation cancelled by an
-      // unmount) so the player can't get stuck holding a vinyl.
-      setTimeout(() => {
-        if (vinylOnPlayer) clearPlayer();
-      }, 700);
-    } else {
-      setTimeout(clearPlayer, 500);
+    const home = measureHomeSlot();
+    if (!el || !home) {
+      finishFlight();
+      return;
     }
+
+    const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const flightMs = reduceMotion ? 140 : duration;
+    const at = (offset, x, y, scale, easing) => ({
+      offset,
+      transform: `translate(${x}px, ${y}px) scale(${scale})`,
+      ...(easing ? { easing } : {}),
+    });
+
+    // Transform and opacity run as two animations so their timings stay
+    // independent: the record holds full opacity for most of the trip and only
+    // settles into the slot's dimmed state as it arrives. Interleaving them as
+    // shared keyframes would force the easing curve to restart mid-flight.
+    const path = liftOff && !reduceMotion
+      ? [
+          at(0, from.x, from.y, from.scale, "cubic-bezier(0.34, 0, 0.5, 1)"),
+          at(0.2, from.x, from.y - 18, from.scale * 1.06, "cubic-bezier(0.22, 1, 0.36, 1)"),
+          at(1, home.x, home.y, home.scale),
+        ]
+      : [
+          at(0, from.x, from.y, from.scale, "cubic-bezier(0.22, 1, 0.36, 1)"),
+          at(1, home.x, home.y, home.scale),
+        ];
+
+    el.animate(path, { duration: flightMs, fill: "forwards" });
+    const flight = el.animate(
+      [{ opacity: 1 }, { opacity: home.opacity }],
+      {
+        duration: Math.round(flightMs * 0.45),
+        delay: Math.round(flightMs * 0.55),
+        easing: "ease-out",
+        fill: "both",
+      }
+    );
+
+    // The hand-off is driven by a timer rather than onfinish alone: onfinish is
+    // delivered on a frame tick, so a busy or throttled frame can hold the
+    // landed record on screen well past the animation and leave a visible pause
+    // before the menu slot lights back up. The timer lands it on schedule and
+    // onfinish just gets there first when it can. Both routes are idempotent,
+    // and fill:forwards means an early-firing timer still finds the record
+    // parked on its final frame.
+    flight.onfinish = finishFlight;
+    flightTimeoutRef.current = setTimeout(finishFlight, flightMs + 30);
   };
+
+  const ejectVinyl = () => flyHome(
+    { x: 0, y: 0, scale: 1 },
+    { duration: EJECT_FLIGHT_MS, liftOff: true }
+  );
+
+  useEffect(() => () => clearTimeout(flightTimeoutRef.current), []);
 
   const [{ isOver }, drop] = useDrop(() => ({
     accept: "VINYL",
@@ -231,34 +311,18 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
   const [{ isDraggingOff }, dragOff] = useDrag(() => ({
     type: "PLAYER_VINYL",
     item: { type: "PLAYER_VINYL" },
-    canDrag: !!vinylOnPlayer,
+    canDrag: !!vinylOnPlayer && !isReturning,
     end: (item, monitor) => {
       const dropPoint = monitor.getClientOffset();
       const startPoint = monitor.getInitialClientOffset();
-      const dropOffset = (dropPoint && startPoint)
-        ? { x: dropPoint.x - startPoint.x, y: dropPoint.y - startPoint.y }
-        : { x: 0, y: 0 };
+      const from = (dropPoint && startPoint)
+        ? { x: dropPoint.x - startPoint.x, y: dropPoint.y - startPoint.y, scale: 1 }
+        : { x: 0, y: 0, scale: 1 };
 
-      // Find where this vinyl's actual slot in the menu is, so it flies back
-      // there rather than just to the player's own center.
-      let snapTarget = { x: 0, y: 0 };
-      const playerVinylEl = vinylElRef.current;
-      const menuSlot = [...document.querySelectorAll(".vinyl-wrapper")]
-        .find((w) => w.querySelector(".vinyl-hint")?.textContent === vinylOnPlayer?.title);
-      const menuVinylEl = menuSlot?.querySelector(".vinyl-record");
-      if (playerVinylEl && menuVinylEl) {
-        const playerRect = playerVinylEl.getBoundingClientRect();
-        const slotRect = menuVinylEl.getBoundingClientRect();
-        snapTarget = {
-          x: (slotRect.left + slotRect.width / 2) - (playerRect.left + playerRect.width / 2),
-          y: (slotRect.top + slotRect.height / 2) - (playerRect.top + playerRect.height / 2),
-        };
-      }
-
-      ejectVinylByDrag(dropOffset, snapTarget);
+      flyHome(from, { duration: DRAG_FLIGHT_MS, liftOff: false });
     },
     collect: (monitor) => ({ isDraggingOff: !!monitor.isDragging() }),
-  }), [vinylOnPlayer]);
+  }), [vinylOnPlayer, isReturning]);
 
   // Add effect to handle drop zone active state
   useEffect(() => {
@@ -278,8 +342,15 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
       ref={drop}
       className={`record-player-container ${dropActive ? 'drop-active' : ''}`}
     >
-      <div className={`record-player ${isPlaying ? "spinning" : ""}`}>
+      {/* The spin lives on the platter graphic below, not on this container.
+          The record being ejected is a child of this element, so if it rotated,
+          the flight home -- measured in viewport coordinates -- would be applied
+          in a spinning coordinate frame and the record would spiral off its
+          slot instead of landing on it. Keeping the housing still also stops the
+          drop hint from rotating out from under the reader. */}
+      <div className="record-player">
         <svg
+          className={isPlaying && !isReturning ? "spinning" : ""}
           viewBox="0 0 300 300"
           xmlns="http://www.w3.org/2000/svg"
         >
@@ -310,7 +381,7 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
               vinylElRef.current = node;
               dragOff(node);
             }}
-            className={`vinyl-on-player ${isEntering ? "entering" : ""} ${isPlaying && !isEjecting && !isFlyingBack ? "spinning" : ""} ${isEjecting ? "ejecting" : ""} ${isDraggingOff ? "dragging-off" : ""}`}
+            className={`vinyl-on-player ${isEntering ? "entering" : ""} ${isPlaying && !isReturning ? "spinning" : ""} ${isReturning ? "returning" : ""} ${isDraggingOff ? "dragging-off" : ""}`}
             style={{ background: getVinylColor(vinylOnPlayer.title) }}
           >
             <div className="vinyl-grooves"></div>
