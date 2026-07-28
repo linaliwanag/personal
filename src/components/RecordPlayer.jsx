@@ -17,6 +17,8 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
   const [isEjecting, setIsEjecting] = useState(false);
   const [snapOffset, setSnapOffset] = useState(null);
   const [snapInstant, setSnapInstant] = useState(false);
+  const [snapReturning, setSnapReturning] = useState(false);
+  const [isEntering, setIsEntering] = useState(false);
   const audioRef = useRef(null);
   const fadeIntervalRef = useRef(null);
 
@@ -67,6 +69,17 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
       setTrackDuration(0);
     }
   }, [currentTrack, currentTrackTitle]);
+
+  useEffect(() => {
+    if (!vinylOnPlayer) return;
+    // Scoped to its own class + timed removal (rather than left as a permanent
+    // property of .vinyl-on-player) so it can't restart later just because some
+    // other class (like .ejecting) toggles on the same element -- CSS animations
+    // take priority over transitions on the same property and will hijack them.
+    setIsEntering(true);
+    const timer = setTimeout(() => setIsEntering(false), 500);
+    return () => clearTimeout(timer);
+  }, [vinylOnPlayer]);
 
   useEffect(() => {
     if (!audioRef.current || !audioRef.current.src) return;
@@ -152,18 +165,20 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
     }
   };
 
-  const ejectVinyl = (dragEndOffset = null) => {
+  const ejectVinyl = (dragEndOffset = null, snapTarget = { x: 0, y: 0 }) => {
     if (!vinylOnPlayer) return;
 
     if (dragEndOffset) {
-      // Snap back to original position immediately from wherever it was dropped,
-      // decoupled from the audio fade timing below.
+      // Snap back to its slot in the menu immediately from wherever it was
+      // dropped, decoupled from the audio fade timing below.
       setSnapOffset(dragEndOffset);
       setSnapInstant(true);
+      setSnapReturning(false);
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           setSnapInstant(false);
-          setSnapOffset({ x: 0, y: 0 });
+          setSnapReturning(true);
+          setSnapOffset(snapTarget);
         });
       });
     }
@@ -187,6 +202,7 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
           setIsEjecting(false);
           setSnapOffset(null);
           setSnapInstant(false);
+          setSnapReturning(false);
         }, 500);
       });
     }
@@ -205,10 +221,27 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
     end: (item, monitor) => {
       const dropPoint = monitor.getClientOffset();
       const startPoint = monitor.getInitialClientOffset();
-      const offset = (dropPoint && startPoint)
+      const dropOffset = (dropPoint && startPoint)
         ? { x: dropPoint.x - startPoint.x, y: dropPoint.y - startPoint.y }
         : { x: 0, y: 0 };
-      ejectVinyl(offset);
+
+      // Find where this vinyl's actual slot in the menu is, so the snap-back
+      // can return there instead of just to the player's own center.
+      let snapTarget = { x: 0, y: 0 };
+      const playerVinylEl = document.querySelector(".vinyl-on-player");
+      const menuSlot = [...document.querySelectorAll(".vinyl-wrapper")]
+        .find((w) => w.querySelector(".vinyl-hint")?.textContent === vinylOnPlayer?.title);
+      const menuVinylEl = menuSlot?.querySelector(".vinyl-record");
+      if (playerVinylEl && menuVinylEl) {
+        const playerRect = playerVinylEl.getBoundingClientRect();
+        const slotRect = menuVinylEl.getBoundingClientRect();
+        snapTarget = {
+          x: (slotRect.left + slotRect.width / 2) - (playerRect.left + playerRect.width / 2),
+          y: (slotRect.top + slotRect.height / 2) - (playerRect.top + playerRect.height / 2),
+        };
+      }
+
+      ejectVinyl(dropOffset, snapTarget);
     },
     collect: (monitor) => ({ isDraggingOff: !!monitor.isDragging() }),
   }), [vinylOnPlayer]);
@@ -260,12 +293,12 @@ const RecordPlayer = ({ onVinylChange, currentVinyl }) => {
         {vinylOnPlayer && (
           <div
             ref={dragOff}
-            className={`vinyl-on-player ${isPlaying && !isEjecting && !snapOffset ? "spinning" : ""} ${isEjecting ? "ejecting" : ""} ${isDraggingOff ? "dragging-off" : ""}`}
+            className={`vinyl-on-player ${isEntering ? "entering" : ""} ${isPlaying && !isEjecting && !snapOffset ? "spinning" : ""} ${isEjecting ? "ejecting" : ""} ${isDraggingOff ? "dragging-off" : ""}`}
             style={{
               background: getVinylColor(vinylOnPlayer.title),
               ...(snapOffset ? {
                 transform: `translate(${snapOffset.x}px, ${snapOffset.y}px)`,
-                opacity: (snapOffset.x === 0 && snapOffset.y === 0) ? 0 : 0.4,
+                opacity: snapReturning ? 0 : 0.4,
                 transition: snapInstant ? "none" : undefined,
               } : {})
             }}

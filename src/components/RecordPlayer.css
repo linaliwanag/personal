@@ -96,7 +96,6 @@
     box-shadow:
         0 8px 25px rgba(0, 0, 0, 0.6),
         inset 0 2px 8px rgba(255, 255, 255, 0.1);
-    animation: vinylDrop 0.5s ease-out;
     z-index: 5;
     border: 1px solid rgba(255, 255, 255, 0.05);
     cursor: grab;
@@ -104,6 +103,10 @@
 
 .vinyl-on-player:active {
     cursor: grabbing;
+}
+
+.vinyl-on-player.entering {
+    animation: vinylDrop 0.5s ease-out forwards;
 }
 
 .vinyl-on-player.dragging-off {
