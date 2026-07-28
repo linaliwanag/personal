@@ -1,17 +1,14 @@
-/* Crate Digger. Every selector starts `.crate-` and everything lives under
-   `.crate-stage`, because all variants' stylesheets share one document.
+/* The record crate: the box, the sleeves standing in it, and the controls for
+   digging through them. The turntable it sits beside is studio.css.
 
    The scene is one perspective root (.crate-scene) containing one preserve-3d
    world. The crate box and the sleeve stack are siblings inside that world, so
    the browser depth-sorts the sleeves against the crate's walls for free --
    there is not a single z-index in the 3D part of this file. */
 
-/* Every token the crate needs, on a class of its own. Studio Crate mounts the
-   same crate (./CrateBox) beside its turntable without a .crate-stage anywhere
-   above it, and a crate whose --sw resolved to nothing would collapse -- so the
-   tokens have to be reachable from a second root. Anything added here must be a
-   token: layout that belongs to Crate Digger's page stays on .crate-stage. */
-.crate-stage,
+/* Every token the crate needs, on a class of its own, set on the wrapper the
+   stage mounts it in. A crate whose --sw resolved to nothing would collapse, so
+   this rule has to reach the box no matter where it is parked. */
 .crate-tokens {
   /* Sleeve size drives everything: crate walls, type scale, layout gutters. */
   --sw: clamp(150px, 40vw, 268px);
@@ -24,9 +21,6 @@
      hinge *and* leave room in front of it for the tipped-forward pile. */
   --bd: 360px;
 
-  /* The sleeve on the deck. */
-  --ow: min(400px, 84vw);
-
   --wood-lit: #7a5533;
   --wood-mid: #573a22;
   --wood-dark: #33210f;
@@ -35,82 +29,6 @@
   --amber: #e0a24c;
   --paper: #ece2d0;
   --paper-ink: #2b2016;
-}
-
-.crate-stage {
-  position: relative;
-  min-height: 100vh;
-  width: 100%;
-  padding: 34px 18px 64px;
-  box-sizing: border-box;
-  color: var(--ink);
-  font-family: inherit;
-}
-
-/* Back room: a single warm lamp over a dark store. Fixed so it covers the
-   inherited #111 page without the stage having to be tall enough itself. */
-.crate-room {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background:
-    radial-gradient(120% 80% at 50% -10%, rgba(224, 162, 76, 0.22), transparent 60%),
-    radial-gradient(90% 60% at 50% 110%, rgba(40, 20, 8, 0.9), transparent 70%),
-    linear-gradient(180deg, #1b1410, #0d0a08 70%);
-}
-
-/* ------------------------------------------------------------------ header */
-
-.crate-head {
-  max-width: 720px;
-  margin: 0 auto 26px;
-  text-align: center;
-}
-
-.crate-title {
-  margin: 0 0 8px;
-  font-size: clamp(1.7rem, 5vw, 2.8rem);
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  color: var(--ink);
-  text-shadow: 0 2px 24px rgba(224, 162, 76, 0.25);
-}
-
-.crate-sub {
-  margin: 0;
-  font-size: clamp(0.85rem, 2.4vw, 1rem);
-  font-weight: 300;
-  line-height: 1.5;
-  color: var(--ink-dim);
-}
-
-/* ------------------------------------------------------------------ layout */
-
-.crate-layout {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: center;
-  gap: clamp(20px, 4vw, 54px);
-  max-width: 1180px;
-  margin: 0 auto;
-}
-
-.crate-col {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 14px;
-  min-width: 0;
-}
-
-.crate-col--dig {
-  flex: 0 1 auto;
-}
-
-.crate-col--deck {
-  flex: 0 1 auto;
-  width: min(440px, 100%);
 }
 
 /* ------------------------------------------------------------- the 3D crate */
@@ -592,63 +510,6 @@
   background: linear-gradient(180deg, rgba(224, 162, 76, 0.28), rgba(120, 74, 26, 0.5));
 }
 
-.crate-btn--eject {
-  border-color: rgba(255, 140, 110, 0.4);
-}
-
-/* ------------------------------------------------------------------ the deck */
-
-/* The card's *size* change lives here, on a plain 2D ancestor, and never on
-   .crate-flipper. Animating `height` on the same element that carries
-   `transform-style: preserve-3d` and the rotation forces the 3D layer to
-   re-rasterise mid-flip, and .crate-fly is off limits too because the arrival
-   FLIP writes an inline `transition` there that would clobber it. */
-.crate-out {
-  position: relative;
-  width: var(--ow);
-  height: var(--ow);
-  display: flex;
-  justify-content: center;
-  transition: height 420ms ease 360ms;
-}
-
-.crate-out.is-flipped {
-  height: min(600px, 66vh);
-}
-
-/* The perspective root has to be .crate-fly and not .crate-out, because
-   `perspective` only reaches an element's *direct* children -- and .crate-fly
-   sits between them carrying the arrival/eject flight. No fill on the fade, or
-   a filling CSS animation would outrank the inline opacity the FLIP sets. */
-.crate-fly {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  perspective: 1400px;
-  animation: crate-fade-in 320ms ease-out;
-  z-index: 1;
-}
-
-@keyframes crate-fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-/* This element does exactly one thing: rotate. No size change, no filter -- a
-   filter would force transform-style back to flat and the two faces would stop
-   being sorted in 3D. */
-.crate-flipper {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  transform-style: preserve-3d;
-  transition: transform 760ms cubic-bezier(.5,.05,.2,1);
-}
-
-.crate-flipper.is-flipped {
-  transform: rotateY(180deg);
-}
-
 /* Two independent guarantees that exactly one face is ever readable:
    `backface-visibility` does it the usual way, and `visibility` does it
    explicitly from React state. The belt-and-braces is deliberate -- these faces
@@ -658,426 +519,35 @@
    of desync that makes the toggle button look broken.
    The 380ms delay is half of the 760ms turn, so the swap happens while the card
    is edge-on and is never visible as a pop. */
-.crate-side {
-  position: absolute;
-  inset: 0;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-  border-radius: 4px;
-  overflow: hidden;
-  box-shadow: 0 24px 40px rgba(0, 0, 0, 0.6);
-  transition: visibility 0s linear 380ms;
-}
-
-.crate-side.is-away {
-  visibility: hidden;
-}
-
-.crate-side--front {
-  --art: calc(var(--ow) * 0.052);
-}
-
-.crate-side--back {
-  transform: rotateY(180deg);
-}
 
 /* Vinyl peeking out of the open end of the sleeve. */
-.crate-disc {
-  position: absolute;
-  left: 50%;
-  top: 6%;
-  width: calc(var(--ow) * 0.82);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background:
-    repeating-radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 4px),
-    radial-gradient(circle at 34% 28%, #4a4a4a, #0b0b0b 62%);
-  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.6);
-  transform: translateX(-14%);
-  animation: crate-disc-out 700ms cubic-bezier(.2,.9,.25,1) both;
-}
-
-@keyframes crate-disc-out {
-  from { transform: translateX(-50%) rotate(0deg); opacity: 0; }
-  to { transform: translateX(-14%) rotate(0deg); opacity: 1; }
-}
-
-.crate-disc.is-spinning {
-  animation: crate-spin 2.6s linear infinite;
-}
 
 @keyframes crate-spin {
   from { transform: translateX(-14%) rotate(0deg); }
   to { transform: translateX(-14%) rotate(360deg); }
 }
 
-.crate-disc-label {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 34%;
-  aspect-ratio: 1;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.5);
-}
-
-.crate-disc-label::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 12%;
-  aspect-ratio: 1;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  background: #0b0b0b;
-}
-
 /* ------------------------------------------------------------- liner notes
    The back of the sleeve, and the only place the record's own `body` is
    rendered. Printed dark-on-newsprint so it reads as a page, not as UI. */
 
-.crate-liner {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-  padding: 16px 18px;
-  box-sizing: border-box;
-  background:
-    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.022) 0 1px, transparent 1px 3px),
-    linear-gradient(160deg, #f2ead9, #ddd0b8);
-  color: var(--paper-ink);
-  font-size: 0.86rem;
-  line-height: 1.55;
-  text-align: left;
-}
-
-.crate-liner-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid rgba(43, 32, 22, 0.3);
-  font-size: 0.66rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  opacity: 0.7;
-}
-
-.crate-liner-title {
-  margin: 10px 0 2px;
-  font-size: 1.5rem;
-  font-weight: 700;
-  line-height: 1.05;
-}
-
-.crate-liner-side {
-  margin: 0 0 10px;
-  font-size: 0.72rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  opacity: 0.65;
-}
-
 /* The content itself. Scrolls, because a sleeve back is a fixed rectangle and
    the Projects note is genuinely long. */
-.crate-liner-body {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-  padding-right: 6px;
-}
-
-.crate-liner-body p {
-  margin: 0 0 0.7em;
-}
-
-.crate-liner-body ul {
-  margin: 0.4em 0;
-}
-
-.crate-liner-body li {
-  margin-bottom: 0.6em;
-}
-
-.crate-liner-body a {
-  color: #8a3d12;
-  font-weight: 600;
-  text-underline-offset: 2px;
-}
-
-.crate-liner-body a:hover {
-  color: #b8541b;
-}
-
-.crate-liner-body img,
-.crate-liner-body .project-screenshot {
-  display: block;
-  max-width: 100%;
-  height: auto;
-  margin: 0.5em 0;
-  border-radius: 4px;
-  border: 1px solid rgba(43, 32, 22, 0.25);
-}
 
 /* records.jsx hard-codes color:#ffffff on the two Contact icons, sized for the
    dark Classic player. On newsprint they'd be invisible, and records.jsx is
    shared by every variant -- so the inline colour is overridden here, in the
    one stylesheet that needs it. */
-.crate-liner-body svg {
-  color: var(--paper-ink) !important;
-}
-
-.crate-liner-body::-webkit-scrollbar {
-  width: 6px;
-}
-
-.crate-liner-body::-webkit-scrollbar-thumb {
-  background: rgba(43, 32, 22, 0.35);
-  border-radius: 3px;
-}
-
-.crate-liner-foot {
-  padding-top: 8px;
-  margin-top: 6px;
-  border-top: 1px solid rgba(43, 32, 22, 0.3);
-}
-
-.crate-barcode {
-  display: flex;
-  align-items: flex-end;
-  gap: 1px;
-  height: 20px;
-  margin-bottom: 5px;
-}
-
-.crate-barcode i {
-  display: block;
-  height: 100%;
-  background: var(--paper-ink);
-  opacity: 0.8;
-}
-
-.crate-liner-fine {
-  margin: 0;
-  font-size: 0.62rem;
-  line-height: 1.4;
-  opacity: 0.66;
-}
-
-/* ------------------------------------------------------------- transport */
-
-.crate-transport {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 14px;
-  box-sizing: border-box;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 232, 200, 0.14);
-  background: linear-gradient(180deg, rgba(37, 26, 18, 0.85), rgba(16, 11, 8, 0.9));
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
-}
-
-.crate-nowplaying {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.8rem;
-  letter-spacing: 0.06em;
-  color: var(--ink-dim);
-}
-
-.crate-nowplaying-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #5c4a38;
-  flex: none;
-}
-
-.crate-nowplaying-dot[data-on] {
-  background: var(--amber);
-  box-shadow: 0 0 10px var(--amber);
-}
-
-.crate-scrub-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.crate-time {
-  font-size: 0.72rem;
-  font-variant-numeric: tabular-nums;
-  color: var(--ink-dim);
-  flex: none;
-  min-width: 34px;
-  text-align: center;
-}
 
 /* A native range, so keyboard seeking and touch targets come for free. */
-.crate-scrub {
-  flex: 1;
-  min-width: 0;
-  height: 22px;
-  margin: 0;
-  appearance: none;
-  -webkit-appearance: none;
-  background: transparent;
-  cursor: pointer;
-}
-
-.crate-scrub::-webkit-slider-runnable-track {
-  height: 6px;
-  border-radius: 3px;
-  background: linear-gradient(
-    90deg,
-    var(--amber) 0 var(--fill, 0%),
-    rgba(255, 232, 200, 0.16) var(--fill, 0%) 100%
-  );
-}
-
-.crate-scrub::-moz-range-track {
-  height: 6px;
-  border-radius: 3px;
-  background: rgba(255, 232, 200, 0.16);
-}
-
-.crate-scrub::-moz-range-progress {
-  height: 6px;
-  border-radius: 3px;
-  background: var(--amber);
-}
-
-.crate-scrub::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 15px;
-  height: 15px;
-  margin-top: -4.5px;
-  border-radius: 50%;
-  background: #fff3e0;
-  border: 0;
-  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.6);
-}
-
-.crate-scrub::-moz-range-thumb {
-  width: 15px;
-  height: 15px;
-  border-radius: 50%;
-  background: #fff3e0;
-  border: 0;
-}
-
-.crate-scrub:focus-visible {
-  outline: 2px solid var(--amber);
-  outline-offset: 4px;
-  border-radius: 4px;
-}
-
-.crate-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.crate-buttons .crate-btn {
-  flex: 1 1 96px;
-}
-
-/* ---------------------------------------------------------------- empty deck */
-
-.crate-empty {
-  width: 100%;
-  padding: 30px 22px;
-  box-sizing: border-box;
-  text-align: center;
-  border-radius: 12px;
-  border: 1px dashed rgba(255, 232, 200, 0.2);
-  background: rgba(0, 0, 0, 0.3);
-}
-
-.crate-empty-slot {
-  display: flex;
-  justify-content: center;
-  align-items: flex-end;
-  gap: 6px;
-  height: 66px;
-  margin-bottom: 16px;
-  opacity: 0.5;
-}
-
-.crate-empty-slot span {
-  display: block;
-  width: 40px;
-  height: 56px;
-  border-radius: 2px;
-  background: linear-gradient(160deg, #4a3b2c, #241a12);
-  transform: rotate(-6deg);
-}
-
-.crate-empty-slot span:nth-child(2) {
-  transform: rotate(-2deg);
-  height: 60px;
-}
-
-.crate-empty-slot span:nth-child(3) {
-  transform: rotate(3deg);
-}
-
-.crate-empty-head {
-  margin: 0 0 6px;
-  font-size: 1.05rem;
-  font-weight: 600;
-}
-
-.crate-empty-body {
-  margin: 0;
-  font-size: 0.85rem;
-  line-height: 1.5;
-  color: var(--ink-dim);
-}
 
 /* ------------------------------------------------------------- narrow / phone */
 
-@media (max-width: 900px) {
-  .crate-layout {
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .crate-col--deck {
-    width: min(440px, 100%);
-  }
-}
-
 @media (max-width: 520px) {
-  .crate-stage {
-    /* --bd is deliberately NOT reduced here: the stack's z-spacing is in fixed
-       px, so a shallower box would let the back of the stack poke out through
-       the far wall. Extra top padding clears the shared variant switcher, which
-       is fixed to the top-right and lands on the heading at this width. */
-    padding: 64px 12px 48px;
-  }
-
   .crate-scene {
     width: calc(var(--bw) + 70px);
     height: calc(var(--bh) + 84px);
     perspective: 800px;
-  }
-
-  .crate-out.is-flipped {
-    height: min(560px, 72vh);
-  }
-
-  .crate-buttons .crate-btn {
-    flex: 1 1 calc(50% - 8px);
-    padding: 10px 8px;
   }
 }
 
@@ -1088,26 +558,111 @@
 
 @media (prefers-reduced-motion: reduce) {
   .crate-sleeve,
-  .crate-flipper,
-  .crate-out,
   .crate-btn {
     transition-duration: 1ms !important;
   }
+}
 
-  /* The face swap is normally deferred to the midpoint of the turn; with no
-     turn to hide behind it has to be immediate, or the card is blank. */
-  .crate-side {
-    transition-delay: 0s !important;
+/* ------------------------------------------ placing the crate beside the deck
+
+   The seam between the two halves of the stage. The crate is mounted inside
+   .studio-scene, so these rules fit it into the deck's 3D room and re-scale the
+   controls that crate.css sizes off the box. */
+
+.stage-crate {
+  /* Sits where the deck's own sleeve rack used to, so the turntable, the beam
+     and the room lighting stay composed exactly as studio.css arranges them. */
+  position: absolute;
+  left: 15.5%;
+  top: 45%;
+  translate: -50% -50%;
+
+  /* The crate is a whole page's worth of furniture shrunk to sit beside a 580px
+     turntable inside a 1120x620 stage. Everything else -- box, walls, type --
+     derives from this one number at the top of the file. */
+  --sw: 214px;
+
+  /* .studio-scene is preserve-3d, so this element is a plane inside the deck's
+     3D space and tilts with the room's parallax. Its contents must not also be
+     3D against that space: the crate opens a fresh context of its own on
+     .crate-scene, which owns the perspective, and the dig controls below it are
+     flat UI that should stay flat. */
+  transform-style: flat;
+
+  /* Note: .studio-scene is `pointer-events: none`, so the crate only receives
+     pointer events because studio.css lists .stage-crate among the controls
+     that opt back in. That list is the single source of truth -- read the
+     hit-testing comment above it before moving anything in here. */
+}
+
+.stage-crate-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* A slight yaw so the crate sits in the room rather than facing the reader
+   square-on. Only the box turns; the controls under it stay flat and readable. */
+.stage-crate .crate-scene {
+  transform: rotateY(13deg);
+}
+
+/* The dig bar and pull button are sized off a full-width scene by default. At
+   this scale they should track the narrower box instead of stretching past it. */
+.stage-crate .crate-dig-bar,
+.stage-crate .crate-btn--pull {
+  width: min(100%, calc(var(--bw) + 90px));
+}
+
+.stage-crate .crate-readout-title {
+  font-size: 0.88rem;
+}
+
+.stage-crate .crate-readout-meta {
+  font-size: 0.68rem;
+}
+
+.stage-crate .crate-btn--pull {
+  padding: 9px 14px;
+  font-size: 0.82rem;
+}
+
+/* The notes are read in the deck's liner panel, so nothing turns a sleeve over
+   and the gap left by a pulled record is the only feedback needed. It wants to
+   be a little more visible against this darker room. */
+.stage-crate .crate-slot {
+  opacity: 0.85;
+}
+
+/* At 780px studio.css turns the stage into a tall 640x900 box and moves the
+   deck up to top 31%, putting the crate underneath it rather than beside it.
+   KEEP IN STEP with the .studio-deck rule in that breakpoint. */
+@media (max-width: 780px) {
+  .stage-crate {
+    left: 50%;
+    /* The crate is a deep box with two rows of controls under it, so its centre
+       sits higher than a flat shelf's would to keep the pull button inside the
+       900px stage. */
+    top: 72%;
+    --sw: 200px;
   }
 
-  .crate-disc,
-  .crate-disc.is-spinning,
-  .crate-fly {
-    animation: none !important;
+  .stage-crate .crate-scene {
+    transform: rotateY(6deg);
   }
+}
 
-  .crate-disc {
-    transform: translateX(-14%);
-    opacity: 1;
+@media (max-width: 520px) {
+  .stage-crate {
+    top: 73%;
+    --sw: 168px;
+  }
+}
+
+@media (hover: none) {
+  .stage-crate .crate-btn {
+    min-height: 44px;
   }
 }

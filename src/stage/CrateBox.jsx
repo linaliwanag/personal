@@ -13,9 +13,8 @@ import { SleeveArt, FillerArt, DividerArt, metaFor } from "./Sleeve";
 import { buildCrate, clamp, poseFor, CULL_BACK, CULL_FRONT } from "./dig";
 
 // The wooden crate you dig through, and nothing else -- no deck, no transport,
-// no page. Crate Digger wraps it in a whole page; Studio Crate parks it next to
-// the turntable. Everything about *what happens to a record once it is out* is
-// the host's business, which is why the only thing this reports upward is
+// no page. Everything about *what happens to a record once it is out* is the
+// stage's business, which is why the only thing this reports upward is
 // `onPull`.
 //
 // The scene is driven by a single scalar: `position`, the fractional index of
@@ -28,12 +27,7 @@ import { buildCrate, clamp, poseFor, CULL_BACK, CULL_FRONT } from "./dig";
 // scene to fly the record home, and has to file the crate back to the slot the
 // record came out of -- both of which need to reach in here.
 const CrateBox = forwardRef(function CrateBox(
-  // `flipOnDeck` says what pulling the record that is *already* on the deck
-  // means. Crate Digger turns the sleeve over, because its back is where the
-  // notes are. Studio Crate has a liner panel for that, so there the gesture
-  // does nothing -- and the button has to stop offering it rather than sit
-  // there as a control that visibly does nothing when pressed.
-  { records, loadedId, onPull, isCoarsePointer, className = "", label, flipOnDeck = true },
+  { records, loadedId, onPull, isCoarsePointer },
   ref
 ) {
   const items = useMemo(() => buildCrate(records), [records]);
@@ -186,13 +180,13 @@ const CrateBox = forwardRef(function CrateBox(
   const frontMeta = frontRecord ? metaFor(frontRecord) : null;
 
   return (
-    <section className={className}>
+    <section className="stage-crate-col">
       <div
         className="crate-scene"
         ref={sceneRef}
         role="group"
         tabIndex={0}
-        aria-label={label || "Record crate. Use left and right arrow keys to flip through it."}
+        aria-label="Record crate. Use left and right arrow keys to dig through it."
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={endPointer}
@@ -273,12 +267,13 @@ const CrateBox = forwardRef(function CrateBox(
                     onPull(item.record, e.currentTarget, index);
                   }}
                   onFocus={() => setCursor(index)}
-                  aria-disabled={onDeck && !flipOnDeck ? true : undefined}
+                  // Nothing happens if you press the record already on the
+                  // platter -- the notes live in the deck's liner panel, not on
+                  // the back of the sleeve, so there is nothing left to reveal.
+                  aria-disabled={onDeck || undefined}
                   aria-label={
                     onDeck
-                      ? flipOnDeck
-                        ? `${item.record.title} is on the deck. Activate to turn the sleeve over.`
-                        : `${item.record.title} is on the deck.`
+                      ? `${item.record.title} is on the deck.`
                       : `Pull out ${item.record.title} — ${item.record.trackLabel}`
                   }
                 >
@@ -345,7 +340,7 @@ const CrateBox = forwardRef(function CrateBox(
       <button
         type="button"
         className="crate-btn crate-btn--pull"
-        disabled={!frontRecord || (loadedId === frontRecord.id && !flipOnDeck)}
+        disabled={!frontRecord || loadedId === frontRecord.id}
         onClick={(e) => {
           // Same synchronous path as tapping the sleeve: this button is measured
           // against the front sleeve's rect via the scene, so the flight still
@@ -362,9 +357,7 @@ const CrateBox = forwardRef(function CrateBox(
         <span>
           {frontRecord
             ? loadedId === frontRecord.id
-              ? flipOnDeck
-                ? `Turn ${frontRecord.title} over`
-                : `${frontRecord.title} is on the deck`
+              ? `${frontRecord.title} is on the deck`
               : `Pull out ${frontRecord.title}`
             : "Nothing to pull here"}
         </span>

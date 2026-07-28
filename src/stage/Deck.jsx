@@ -19,7 +19,7 @@ import {
   fractionForAngle,
   clamp,
   makeProjector,
-} from "./geometry";
+} from "./deckGeometry";
 
 const DEG = 180 / Math.PI;
 const STROBE_DOTS = 44;

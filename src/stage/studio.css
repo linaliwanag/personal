@@ -243,27 +243,28 @@
  * the control stays perfectly visible, because painting and hit-testing sort
  * the same way and the control is genuinely behind.
  *
- * That is not hypothetical here. `.studio-rack-slots` is at translateZ(-20px)
- * and each sleeve leans a further -7px per index, so all three sleeves sit at
- * z -20..-34: behind `.studio-rack`'s own (unpainted) box at z 0, and behind
- * `.studio-scene`'s upright plane at z 0. elementFromPoint over a sleeve
- * returned the *grandparent*, and the records could not be loaded at all.
+ * That is not hypothetical. The sleeve rack that used to stand where the crate
+ * is now sat at translateZ(-20px), with each sleeve leaning a further -7px:
+ * behind its own parent's unpainted box at z 0, and behind `.studio-scene`'s
+ * upright plane at z 0. elementFromPoint over a sleeve returned the
+ * *grandparent*, and no record could be loaded at all. The crate is mounted in
+ * the same slot and would fail the same way.
  *
  * Nudging the z of individual fixtures only moves the problem around: the deck
  * is tipped 57deg, so its planes cut straight through the scene's upright one
  * and "in front" is different for the rear of the plinth than for the front.
  * Depth is the wrong tool. Instead the entire decorative scene is made
  * click-through -- on BOTH .studio-stage and .studio-scene, since the stage is
- * what opens the 3D context the sleeves sit behind, and silencing only the
+ * what opens the 3D context the crate sits behind, and silencing only the
  * scene just moves the interception one level up -- and the handful of real
- * controls opt back in -- hit testing
- * skips a `pointer-events: none` box outright, whatever the sort order, so this
- * is immune to every future change of transform, tilt or stacking.
+ * controls opt back in. Hit testing skips a `pointer-events: none` box
+ * outright, whatever the sort order, so this is immune to every future change
+ * of transform, tilt or stacking.
  *
  * ADDING A CONTROL INSIDE .studio-scene MEANS ADDING IT TO THIS LIST.
  * (`.studio-probe` is deliberately absent -- the projection probes must never
  * take a hit.) */
-.studio-sleeve,
+.stage-crate,
 .studio-headshell,
 .studio-fader-knob,
 .studio-power,
@@ -271,240 +272,10 @@
   pointer-events: auto;
 }
 
-/* --------------------------------------------------------------------------
-   The crate
-   -------------------------------------------------------------------------- */
-
-.studio-rack {
-  position: absolute;
-  left: 16%;
-  top: 41%;
-  width: 306px;
-  height: 372px;
-  translate: -50% -50%;
-  transform-style: preserve-3d;
-  transform: rotateY(17deg) rotateX(3deg);
-}
-
-.studio-rack-back {
-  position: absolute;
-  inset: 0;
-  border-radius: 6px;
-  transform: translateZ(-52px);
-  background:
-    repeating-linear-gradient(
-      91deg,
-      rgba(255, 255, 255, 0.035) 0 2px,
-      rgba(0, 0, 0, 0.07) 2px 5px,
-      transparent 5px 26px
-    ),
-    linear-gradient(168deg, #4a3a2c 0%, #3a2d22 46%, #241c15 100%);
-  box-shadow:
-    inset 0 2px 0 rgba(255, 226, 186, 0.14),
-    inset 0 -30px 46px rgba(0, 0, 0, 0.55);
-}
-
-/* Hinged along the crate's bottom front edge and folded straight back, so the
-   sleeves have a floor that recedes instead of a painted-on one. */
-.studio-rack-floor {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 52px;
-  transform-origin: 50% 100%;
-  transform: rotateX(90deg);
-  background: linear-gradient(180deg, #1a140f, #33281e);
-  box-shadow: inset 0 8px 20px rgba(0, 0, 0, 0.6);
-}
-
-.studio-rack-lip {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 62px;
-  border-radius: 4px 4px 7px 7px;
-  transform: translateZ(6px);
-  background: linear-gradient(178deg, #6a5340 0%, #4a3a2c 34%, #2c2219 100%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 231, 194, 0.32),
-    0 12px 26px rgba(0, 0, 0, 0.5);
-}
-
-.studio-rack-label {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 22px;
-  transform: translateZ(8px);
-  text-align: center;
-  font-size: 0.62rem;
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
-  color: rgba(255, 226, 186, 0.5);
-}
-
-.studio-rack-slots {
-  position: absolute;
-  left: 18px;
-  right: 18px;
-  top: 24px;
-  bottom: 76px;
-  display: flex;
-  flex-direction: column;
-  gap: 13px;
-  transform: translateZ(-20px);
-  transform-style: preserve-3d;
-}
-
-/* --- sleeves ------------------------------------------------------------- */
-
-.studio-sleeve {
-  position: relative;
-  flex: 1 1 0;
-  min-height: 66px;
-  cursor: pointer;
-  transform-style: preserve-3d;
-  /* --sleeve-i is the record's index; each sleeve leans a little further back
-     so the crate reads as something you flip through rather than a list. */
-  transform: translateZ(calc(var(--sleeve-i, 0) * -7px)) rotateY(calc(var(--sleeve-i, 0) * -1.6deg));
-  transition: transform 0.34s cubic-bezier(0.2, 0.8, 0.25, 1), opacity 0.3s ease;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.studio-sleeve:hover,
-.studio-sleeve:focus-visible {
-  transform: translateZ(calc(var(--sleeve-i, 0) * -7px + 22px)) rotateY(calc(var(--sleeve-i, 0) * -1.6deg))
-    translateX(10px);
-}
-
-.studio-sleeve:focus-visible {
-  outline: 2px solid var(--studio-amber);
-  outline-offset: 4px;
-  border-radius: 5px;
-}
-
-.studio-sleeve:active {
-  transition-duration: 0.09s;
-  transform: translateZ(calc(var(--sleeve-i, 0) * -7px + 10px)) rotateY(calc(var(--sleeve-i, 0) * -1.6deg))
-    translateX(4px);
-}
-
-/* The record is on the deck: the slot it came out of stays open, so the crate
-   visibly has a gap in it for as long as the side is playing. */
-.studio-sleeve.is-out {
-  opacity: 0;
-  pointer-events: none;
-  transform: translateZ(-40px) translateX(-26px) rotateY(-16deg);
-}
-
-.studio-sleeve-disc {
-  position: absolute;
-  top: 50%;
-  right: -13px;
-  width: 56px;
-  height: 56px;
-  margin-top: -28px;
-  border-radius: 50%;
-  transform: translateZ(-3px);
-  background:
-    radial-gradient(circle at 50% 50%, #6a6a70 0 5px, #16161a 6px 8px, transparent 9px),
-    repeating-radial-gradient(circle at 50% 50%, #101014 0 1px, #1b1b20 1px 2px),
-    #121216;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.6);
-}
-
-.studio-sleeve-face {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 2px;
-  padding: 0 62px 0 16px;
-  border-radius: 3px 2px 2px 3px;
-  overflow: hidden;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.22),
-    inset 0 -14px 22px rgba(0, 0, 0, 0.36),
-    0 10px 20px rgba(0, 0, 0, 0.45);
-}
-
-/* Printed-card texture: a coarse fibre grain plus the darkening you get where
-   a sleeve has been thumbed at the opening. */
-.studio-sleeve-grain {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    repeating-linear-gradient(
-      64deg,
-      rgba(255, 255, 255, 0.05) 0 1px,
-      transparent 1px 3px
-    ),
-    repeating-linear-gradient(
-      -21deg,
-      rgba(0, 0, 0, 0.08) 0 1px,
-      transparent 1px 4px
-    ),
-    radial-gradient(120% 90% at 8% 0%, rgba(255, 245, 225, 0.22), transparent 56%),
-    linear-gradient(100deg, transparent 62%, rgba(0, 0, 0, 0.32));
-  mix-blend-mode: overlay;
-}
-
-.studio-sleeve-kicker {
-  position: relative;
-  font-size: 0.53rem;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.66);
-}
-
-.studio-sleeve-title {
-  position: relative;
-  font-size: 1.02rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-}
-
-.studio-sleeve-track {
-  position: relative;
-  font-size: 0.63rem;
-  letter-spacing: 0.06em;
-  color: rgba(255, 255, 255, 0.55);
-}
-
 /* The die-cut window every cheap reissue sleeve has, showing the label. */
-.studio-sleeve-hole {
-  position: absolute;
-  top: 50%;
-  right: 18px;
-  width: 26px;
-  height: 26px;
-  margin-top: -13px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 42% 36%, #2a2a30, #08080a 74%);
-  box-shadow:
-    inset 0 1px 2px rgba(0, 0, 0, 0.9),
-    0 0 0 1px rgba(255, 255, 255, 0.1);
-}
 
 /* The board thickness along the top -- a 5px plane hinged at the top edge and
    folded back, which is what stops the sleeve reading as a flat rectangle. */
-.studio-sleeve-edge {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 6px;
-  transform-origin: 50% 0;
-  transform: rotateX(74deg);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.08));
-  border-radius: 2px 2px 0 0;
-}
 
 /* --------------------------------------------------------------------------
    The deck
@@ -1896,21 +1667,11 @@
     top: 31%;
   }
 
-  .studio-rack {
-    left: 50%;
-    top: 79%;
-    width: 560px;
-    height: 300px;
-    transform: rotateY(6deg) rotateX(3deg);
-  }
+  
 
-  .studio-rack-slots {
-    gap: 16px;
-  }
+  
 
-  .studio-sleeve {
-    min-height: 62px;
-  }
+  
 
   .studio-spec {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1964,9 +1725,7 @@
     transform: none;
   }
 
-  .studio-sleeve:hover {
-    transform: translateZ(calc(var(--sleeve-i, 0) * -7px)) rotateY(calc(var(--sleeve-i, 0) * -1.6deg));
-  }
+  
 }
 
 /* Keep the object, drop the perpetual motion: the deck still reads as a solid
@@ -1981,7 +1740,6 @@
     animation: none !important;
   }
 
-  .studio-sleeve,
   .studio-arm-rotor,
   .studio-meter-fill,
   .studio-headshell,

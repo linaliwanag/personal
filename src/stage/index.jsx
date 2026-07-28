@@ -9,15 +9,17 @@ import React, {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlay, faPause, faEject, faStop } from "@fortawesome/free-solid-svg-icons";
 
-import { formatTime } from "../../audio/useTurntableAudio";
+import { formatTime } from "../audio/useTurntableAudio";
 import Deck from "./Deck";
-import { PITCH_RANGE } from "./geometry";
+import CrateBox from "./CrateBox";
+import { PITCH_RANGE } from "./deckGeometry";
 import "./studio.css";
+import "./crate.css";
 
-// The record travels between the rack and the platter inside the scene's own 3D
-// space rather than as a fixed overlay measured in viewport pixels: both ends
+// The record travels between the crate and the platter inside the scene's own
+// 3D space rather than as a fixed overlay measured in viewport pixels: both ends
 // are already in the same preserve-3d frame, so the disc genuinely arcs up out
-// of the rack and settles onto the platter with the right foreshortening, and
+// of the crate and settles onto the platter with the right foreshortening, and
 // there is nothing to re-measure if the page scrolls mid-flight.
 const FLIGHT_IN_MS = 640;
 const FLIGHT_OUT_MS = 520;
@@ -40,88 +42,36 @@ const prefersReducedMotion = () =>
 const DISC_REST_Z = 25;
 
 // Where the disc comes from, in platter-local pixels: up, back and off to the
-// left, which is where the rack sits in the scene. Z is measured from the
+// left, which is where the crate sits in the scene. Z is measured from the
 // platter mount, hence DISC_REST_Z as the floor rather than 0.
 const OFF_PLATTER = `translate3d(-300px, -150px, ${DISC_REST_Z + 210}px) rotateZ(-26deg) scale(0.46)`;
 const OVERSHOOT = `translate3d(-26px, -12px, ${DISC_REST_Z + 46}px) rotateZ(-5deg) scale(1.05)`;
 const ON_PLATTER = `translate3d(0px, 0px, ${DISC_REST_Z}px) rotateZ(0deg) scale(1)`;
 
-const Sleeve = ({ record, index, isLoaded, onPick }) => {
-  const ref = useRef(null);
-
-  // The rule that outranks everything else here: onTapLoad has to run inside the
-  // real gesture, on this tick. The lift-out animation is played by the deck
-  // *around* the state change, never before it.
-  const pick = (event) => {
-    if (isLoaded) return;
-    const rect = ref.current?.getBoundingClientRect();
-    onPick(
-      record,
-      rect
-        ? { cx: rect.left + rect.width / 2, cy: rect.top + rect.height / 2, width: rect.width }
-        : undefined
-    );
-    event.currentTarget.blur?.();
-  };
-
-  return (
-    <div
-      ref={ref}
-      className={`studio-sleeve${isLoaded ? " is-out" : ""}`}
-      style={{ "--sleeve-i": index }}
-      role="button"
-      tabIndex={0}
-      aria-label={`Load ${record.title}`}
-      aria-pressed={isLoaded}
-      onClick={pick}
-      onKeyDown={(event) => {
-        if (event.key !== "Enter" && event.key !== " ") return;
-        event.preventDefault();
-        pick(event);
-      }}
-    >
-      <span className="studio-sleeve-disc" />
-      <span className="studio-sleeve-face" style={{ background: record.color }}>
-        <span className="studio-sleeve-grain" />
-        <span className="studio-sleeve-kicker">SIDE {String.fromCharCode(65 + index)}</span>
-        <span className="studio-sleeve-title">{record.title}</span>
-        <span className="studio-sleeve-track">{record.trackLabel}</span>
-        <span className="studio-sleeve-hole" />
-      </span>
-      <span className="studio-sleeve-edge" />
-    </div>
-  );
-};
-
-// The deck's own record store: three sleeves filed in a shallow wooden rack.
-// Pulled out into a component because it is one of two things that can sit in
-// this slot -- Studio Crate hands in the full crate from ../crate instead.
-const Rack = ({ records, loadedId, onPick }) => (
-  <div className="studio-rack">
-    <span className="studio-rack-floor" />
-    <span className="studio-rack-back" />
-    <span className="studio-rack-lip" />
-    <div className="studio-rack-slots">
-      {records.map((r, i) => (
-        <Sleeve
-          key={r.id}
-          record={r}
-          index={i}
-          isLoaded={loadedId === r.id}
-          onPick={onPick}
-        />
-      ))}
-    </div>
-    <span className="studio-rack-label">CRATE&nbsp;/&nbsp;A–C</span>
-  </div>
-);
-
-// `picker` swaps out whatever sits beside the deck and feeds it records; `copy`
-// swaps the idle liner-notes text that describes how to use it. Everything else
-// -- the deck, the arm, the flights, the transport -- is shared, which is the
-// whole point: Studio Crate is this stage with a different record store, not a
-// second copy of it.
-export const StudioStage = ({
+// The whole page body: a listening room with a record crate beside a turntable.
+// App owns what is on the player and what is coming out of the speakers; this
+// owns everything you can see. The props are exactly:
+//
+//   records          Array from src/records.jsx --
+//                    { id, title, file, trackLabel, color, body }. `color` is a
+//                    CSS linear-gradient; `body` is JSX. Never mutate.
+//   loaded           null, or { record, source, fromRect }. `fromRect`
+//                    ({ cx, cy, width }, viewport coords) is where the sleeve
+//                    was when it was pulled.
+//   onTapLoad        (record, fromRect?) => void. Puts a record on the player.
+//                    MUST be called synchronously inside the user's gesture --
+//                    iOS only unlocks audio inside a real click/touch handler,
+//                    so no animation may defer it. Play the flight afterwards.
+//   onEject          () => void. Clears the player. Call it when the eject
+//                    animation has *landed*, not when the button is pressed.
+//   onEjectStart     () => void. Fades audio out and releases the source. Call
+//                    the moment eject begins, so sound stops with the gesture
+//                    while the record is still flying home.
+//   audio            { isPlaying, progress, duration, toggle, stop, seek }.
+//                    progress is 0-100, duration seconds, seek(f) takes 0-1.
+//                    Loading is App's job -- never call load() from here.
+//   isCoarsePointer  true on touch. Resolved once at module load.
+const Stage = ({
   records,
   loaded,
   onTapLoad,
@@ -129,11 +79,11 @@ export const StudioStage = ({
   onEjectStart,
   audio,
   isCoarsePointer,
-  picker,
-  copy,
 }) => {
   const record = loaded?.record ?? null;
+  const loadedId = record?.id ?? null;
 
+  const crateRef = useRef(null);
   const rootRef = useRef(null);
   const sceneRef = useRef(null);
   const discRef = useRef(null);
@@ -310,6 +260,26 @@ export const StudioStage = ({
     []
   );
 
+  // Straight through, inside the crate's real click handler -- the deck plays
+  // its arrival flight off the `loaded` change afterwards. Nothing here may
+  // defer the call; see onTapLoad in the contract above.
+  const pull = useCallback(
+    (rec, el) => {
+      // The record already on the platter has nowhere to go: the notes are in
+      // the liner panel, not on the back of the sleeve, so there is nothing a
+      // second pull could reveal. CrateBox disables the button to match.
+      if (loadedId === rec.id) return;
+
+      const r = el.getBoundingClientRect();
+      onTapLoad(rec, {
+        cx: r.left + r.width / 2,
+        cy: r.top + r.height / 2,
+        width: r.width,
+      });
+    },
+    [loadedId, onTapLoad]
+  );
+
   const total = formatTime(100, audio.duration);
   const elapsed = formatTime(audio.progress, audio.duration);
 
@@ -350,9 +320,18 @@ export const StudioStage = ({
           <div className="studio-viewport">
             <div className="studio-stage">
               <div className="studio-scene" ref={sceneRef}>
-                {picker ?? (
-                  <Rack records={records} loadedId={record?.id ?? null} onPick={onTapLoad} />
-                )}
+                {/* `crate-tokens` carries --sw and the wood palette that every
+                    .crate- rule resolves against; crate.css shrinks it from
+                    there to fit beside the deck. */}
+                <div className="stage-crate crate-tokens">
+                  <CrateBox
+                    ref={crateRef}
+                    records={records}
+                    loadedId={loadedId}
+                    onPull={pull}
+                    isCoarsePointer={isCoarsePointer}
+                  />
+                </div>
 
                 <Deck
                   record={record}
@@ -381,7 +360,7 @@ export const StudioStage = ({
               <p className="studio-liner-track">
                 {record
                   ? record.trackLabel
-                  : copy?.hint ?? "Pick a sleeve out of the rack to start a side."}
+                  : "Dig through the crate and pull a record out to start a side."}
               </p>
             </div>
 
@@ -454,21 +433,22 @@ export const StudioStage = ({
             </div>
 
             <div className="studio-liner-body">
-              {record
-                ? record.body
-                : copy?.body ?? (
-                    <div>
-                      <p>
-                        Three sides sit in the rack: who I am, what I&rsquo;ve built, and how to
-                        reach me. Lift one out and the deck cues it up.
-                      </p>
-                      <p>
-                        The arm is live &mdash; grab the headshell and swing it across the record
-                        to scrub. The fader pulls the platter off speed, and the strobe dots
-                        around the rim drift the moment it leaves 0.0.
-                      </p>
-                    </div>
-                  )}
+              {record ? (
+                record.body
+              ) : (
+                <div>
+                  <p>
+                    The crate holds three of mine filed among the usual junk &mdash; who I am,
+                    what I&rsquo;ve built, and how to reach me. Drag across it, or use the
+                    arrows, and pull one out to cue it up.
+                  </p>
+                  <p>
+                    The arm is live &mdash; grab the headshell and swing it across the record to
+                    scrub. The fader pulls the platter off speed, and the strobe dots around the
+                    rim drift the moment it leaves 0.0.
+                  </p>
+                </div>
+              )}
             </div>
           </aside>
         </div>
@@ -477,7 +457,4 @@ export const StudioStage = ({
   );
 };
 
-// No default export any more: Studio Deck was a look of its own until the site
-// settled on Studio Crate, which imports { StudioStage } and hands it a crate
-// instead of the rack below. The Rack is kept because it is still the default
-// when no picker is supplied, and it is the reference for what a picker is.
+export default Stage;

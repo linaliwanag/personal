@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useLayoutEffect, useRef } from "react";
 
-import Stage from "./variants/studiocrate";
+import Stage from "./stage";
 import { records } from "./records";
 import { isCoarsePointer } from "./pointer";
 import { useTurntableAudio } from "./audio/useTurntableAudio";
@@ -8,9 +8,9 @@ import "./App.css";
 
 // App owns what is on the player and what is coming out of the speakers; the
 // Stage owns everything you can see. The split is what let the site try on six
-// different looks without touching playback -- see src/variants/stageProps.js
-// for the contract, which is still the seam even now that Studio Crate is the
-// only look left.
+// different looks without touching playback, and it still earns its keep as the
+// line between playback and layout. The props are documented on the Stage
+// itself, in src/stage/index.jsx.
 const App = () => {
   // The single source of truth for what's on the player.
   // { record, source: "tap", fromRect } -- fromRect is where the sleeve was
