@@ -42,21 +42,6 @@ const FALLBACK_META = {
 
 export const metaFor = (record) => (record && META[record.id]) || FALLBACK_META;
 
-// Bar widths are hashed from the record id rather than randomised, so the
-// barcode doesn't reshuffle itself every time the sleeve re-renders -- and it
-// re-renders on every frame of a flip.
-const barcodeFor = (seed) => {
-  let h = 2166136261;
-  for (let i = 0; i < seed.length; i += 1) {
-    h ^= seed.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return Array.from({ length: 42 }, () => {
-    h = Math.imul(h ^ (h >>> 15), 2246822507);
-    return 1 + ((h >>> 17) % 3);
-  });
-};
-
 // The cover. `record.color` is the artwork -- everything else is print, wear
 // and shop stickers laid over it.
 export const SleeveArt = ({ record }) => {
@@ -81,40 +66,14 @@ export const SleeveArt = ({ record }) => {
   );
 };
 
-// The back of the sleeve. The record's own `body` is dropped straight in as the
-// sleeve notes; everything around it is the printed furniture of a real jacket.
-export const LinerNotes = ({ record }) => {
-  const meta = metaFor(record);
-  const bars = barcodeFor(record.id);
-
-  return (
-    <div className="crate-liner">
-      <div className="crate-liner-head">
-        <span>{meta.catalog}</span>
-        <span>Stereo · 33⅓ rpm</span>
-      </div>
-
-      <h3 className="crate-liner-title">{record.title}</h3>
-      <p className="crate-liner-side">Side A — {record.trackLabel}</p>
-
-      <div className="crate-liner-body">{record.body}</div>
-
-      <div className="crate-liner-foot">
-        <div className="crate-barcode" aria-hidden="true">
-          {bars.map((w, i) => (
-            <i key={i} style={{ width: `${w}px` }} />
-          ))}
-        </div>
-        <p className="crate-liner-fine">
-          ℗ {meta.year} Liwanag Recordings · {meta.press} · {meta.note}
-        </p>
-      </div>
-    </div>
-  );
-};
+// There was a LinerNotes face here -- the printed back of the sleeve, with the
+// record's own `body` dropped in as the notes. Crate Digger turned a pulled
+// sleeve over to show it. Studio Crate reads the notes in the deck's liner
+// panel instead, so nothing turns over any more and it went with that variant.
+// It is in git if the sleeve back is ever wanted again.
 
 // Padding for the crate: sleeves nobody can pull, plus the hand-written card
-// dividers they were filed behind. Purely scenery -- see FILLERS in index.jsx
+// dividers they were filed behind. Purely scenery -- see buildCrate in dig.js
 // for why none of it is focusable.
 export const FillerArt = ({ tone, label }) => (
   <div className="crate-art crate-art--filler" style={{ background: tone }}>

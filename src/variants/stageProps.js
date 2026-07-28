@@ -1,24 +1,27 @@
-// The contract between App and every variant Stage.
+// The contract between App and the Stage.
 //
 // A Stage is a default-exported React component that renders the whole page
-// body for one look. It receives exactly these props:
+// body. It owns the heading, the record picker, the player and the content
+// panel -- App owns only what is on the player and what is coming out of the
+// speakers. The site used to offer six looks behind a switcher and this seam is
+// what made that cheap; Studio Crate is the only one left, but the split is
+// still worth keeping: it is what stops layout work from touching playback.
+//
+// A Stage receives exactly these props:
 //
 //   records          Array of record objects from src/records.jsx. Each is
 //                    { id, title, file, trackLabel, color, body }. `color` is a
 //                    CSS linear-gradient string; `body` is JSX. Never mutate.
 //
 //   loaded           null, or { record, source, fromRect }.
-//                    `source` is "tap" or "drop" -- which gesture put the
-//                    record on the player, so a Stage can pick an arrival
-//                    animation. `fromRect` ({ cx, cy, width }, viewport
-//                    coordinates) is present for taps: where the record was
-//                    when it was tapped, so it can fly from there.
+//                    `fromRect` ({ cx, cy, width }, viewport coordinates) is
+//                    where the sleeve was when it was pulled, so the record can
+//                    fly to the platter from there.
 //
 //   onTapLoad        (record, fromRect?) => void. Puts a record on the player.
 //                    Must be called synchronously inside the user's gesture --
 //                    iOS only unlocks audio inside a real click/touch handler.
-//
-//   onDropLoad       (record) => void. Same, for a drag-and-drop arrival.
+//                    No animation may defer it; play the flight afterwards.
 //
 //   onEject          () => void. Clears the player. Call it when the eject
 //                    animation has *landed*, not when the button is pressed --
@@ -35,8 +38,4 @@
 //                    never calls load() itself.
 //
 //   isCoarsePointer  true on touch devices. Resolved once at module load.
-//
-// A Stage is mounted inside a react-dnd DndProvider, so useDrag/useDrop are
-// available -- but nothing requires a Stage to use them. Pointer events are
-// fine, and often better for 3D scenes.
 export {};

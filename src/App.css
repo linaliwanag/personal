@@ -1,11 +1,11 @@
-/* Global reset and base styles shared by every variant. Anything that belongs
-   to one variant's look lives in that variant's own stylesheet.
+/* Global reset and base styles. Anything that belongs to the look itself lives
+   in the stage's own stylesheet (studio.css / crate.css / studiocrate.css).
 
    Deliberately no `height: 100%` here. Combined with overflow-x: hidden it
    pinned <body> to the viewport height and made *body itself* the scroll
    container instead of the page -- window.scrollY stayed 0 no matter how far
    you scrolled, scrollIntoView couldn't move the page, and iOS lost momentum
-   scrolling and the collapsing URL bar. Each variant's own min-height: 100vh
+   scrolling and the collapsing URL bar. The stage's own min-height: 100vh
    wrapper is what actually fills the screen. */
 html,
 body {
@@ -15,20 +15,6 @@ body {
   background-color: #111;
   color: white;
   overflow-x: hidden;
-}
-
-/* Shown while a lazily-loaded variant's chunk is in flight. Variants are code
-   split, so switching to one for the first time is a real network round trip. */
-.variant-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  width: 100%;
-  font-size: 0.9rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  opacity: 0.45;
 }
 
 /* Loading animation */

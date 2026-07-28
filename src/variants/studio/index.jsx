@@ -477,7 +477,7 @@ export const StudioStage = ({
   );
 };
 
-// Studio Deck itself: the stage with its own rack, no overrides.
-const Stage = (props) => <StudioStage {...props} />;
-
-export default Stage;
+// No default export any more: Studio Deck was a look of its own until the site
+// settled on Studio Crate, which imports { StudioStage } and hands it a crate
+// instead of the rack below. The Rack is kept because it is still the default
+// when no picker is supplied, and it is the reference for what a picker is.
