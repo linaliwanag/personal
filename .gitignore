@@ -26,6 +26,3 @@ yarn-error.log*
 # Ignore all .env files in any directory
 .env
 **/.env
-
-# firebase
-**/.firebase/
