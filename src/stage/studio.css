@@ -377,12 +377,22 @@
   top: 54%;
   width: 580px;  /* PLINTH.w -- the plinth itself is sized inline to match */
   height: 430px; /* PLINTH.h */
-  translate: -50% -50%;
   transform-style: preserve-3d;
-  /* The one rotation the whole fixture layout is seen through. The pointer
+  /* The centring is folded into `transform` here, NOT written as the separate
+     `translate: -50% -50%` property, and it has to stay that way.
+     The CSS minifier treats `translate` as though a `transform` in the same rule
+     overrode it, and silently deletes it -- so the independent property survives
+     `npm run dev` (unminified) and vanishes from the production bundle, which put
+     the deck 290px right and 215px low on the live site while every local check
+     passed. It only does this to rules that declare BOTH properties; the nine
+     rules below that rely on a standalone `translate` never set `transform`, so
+     they are unaffected and must keep using it (see .studio-disc-mount for why).
+     Folding is exactly equivalent regardless: the spec applies `translate`
+     before `transform`, which is the order they are written in here.
+     The rotation is the one the whole fixture layout is seen through. The pointer
      projection in geometry.js inverts whatever this ends up being, so it can be
      changed freely -- including the yaw -- without breaking the arm drag. */
-  transform: rotateX(57deg) rotateZ(-2.5deg);
+  transform: translate(-50%, -50%) rotateX(57deg) rotateZ(-2.5deg);
 }
 
 /* Painted, not blurred: a `filter` here would flatten this node out of the
@@ -771,8 +781,9 @@
   left: 50%;
   top: 50%;
   border-radius: 50%;
-  translate: -50% -50%;
-  transform: translateZ(2px);
+  /* Centring folded into `transform` for the same reason as .studio-deck -- this
+     is the other rule that sets both, and the other one the minifier stripped. */
+  transform: translate(-50%, -50%) translateZ(2px);
   /* Felt: matte, faintly fibrous, with a screen-printed ring near the edge. */
   background:
     repeating-conic-gradient(
