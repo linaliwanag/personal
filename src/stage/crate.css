@@ -582,7 +582,23 @@
 
   /* The crate is a whole page's worth of furniture shrunk to sit beside a 580px
      turntable inside a 1120x620 stage. Everything else -- box, walls, type --
-     derives from this one number at the top of the file. */
+     derives from this one number at the top of the file.
+   *
+   * DO NOT SHRINK THIS PER BREAKPOINT. It is tempting, because it looks like the
+   * crate's size dial, and it is not: --sw drives the *face* plane only. The
+   * depth axis does not follow it -- --bd is a flat 360px, poseFor() spaces the
+   * standing stack in absolute pixels (8*20 + 7*6 = 202), and the front lip
+   * offset in .crate-box is a literal 128. Lower --sw and the face shrinks while
+   * the box keeps its depth, so the crate stretches along z: at --sw 168 the box
+   * went from 1.68 sleeve-widths deep to 2.14, and both side walls fanned out
+   * into wedges. That was the phone bug.
+   *
+   * The crate is one object with one set of proportions, and the thing that
+   * resizes it is --studio-scale, which is a scale3d on .studio-stage and so
+   * takes the z axis with it. Below 780px the stage is a fixed 640x830 box, so
+   * the crate's fit is settled once and holds at every width under that. If the
+   * crate needs to be smaller, move --studio-scale, or scale .crate-scene as a
+   * whole -- never this. */
   --sw: 214px;
 
   /* .studio-scene is preserve-3d, so this element is a plane inside the deck's
@@ -607,9 +623,22 @@
 }
 
 /* A slight yaw so the crate sits in the room rather than facing the reader
-   square-on. Only the box turns; the controls under it stay flat and readable. */
+   square-on. Only the box turns; the controls under it stay flat and readable.
+
+   THE YAW IS NOT DECORATION. Turned closer to square-on you see both side walls
+   at once, and a box that is deeper than it is wide then reads as a flat panel
+   with two wings fanning off it rather than as a crate. It stays at 13deg at
+   every width for that reason -- see the note on --sw below. */
 .stage-crate .crate-scene {
   transform: rotateY(13deg);
+
+  /* Pinned against the narrow-screen rule near the top of this file, which pulls
+     the camera in to 800px. That rule is for the crate standing alone as a whole
+     page, where closing on it is the point. Here the crate is one fixture in a
+     stage that is already scaled to fit, and perspective is a proportion of the
+     box like any other: at 800px against a 360px depth the camera sits 2.2 box
+     depths away instead of 3.2, and the walls splay. */
+  perspective: 1150px;
 }
 
 /* The dig bar and pull button are sized off a full-width scene by default. At
@@ -650,18 +679,19 @@
        sits higher than a flat shelf's would to keep the pull button inside the
        830px stage. */
     top: 70%;
-    --sw: 200px;
   }
 
+  /* .crate-scene carries 120px of slack around the box so a crate standing on
+     its own has somewhere to throw its shadow and its tipped sleeves. Stacked
+     under the deck there is no such room, and the slack is the difference
+     between 4px of clearance at the bottom of the stage and 22px. The narrow
+     rule near the top of this file already trims it, but only below 520px --
+     which left a band from 521 to 780 where the layout had gone single-column
+     but the crate was still padded for a page of its own. 780 is where the
+     stacking happens, so it is where the trim belongs. */
   .stage-crate .crate-scene {
-    transform: rotateY(6deg);
-  }
-}
-
-@media (max-width: 520px) {
-  .stage-crate {
-    top: 71%;
-    --sw: 168px;
+    width: calc(var(--bw) + 70px);
+    height: calc(var(--bh) + 84px);
   }
 }
 
