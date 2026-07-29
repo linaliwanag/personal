@@ -15,6 +15,9 @@ node_modules/
 # local dev-server launch config (hardcodes a machine-specific node path)
 .claude/launch.json
 
+# session context for Claude Code -- notes to itself, not project source
+.claude/CLAUDE.md
+
 # misc
 .DS_Store
 .env.local
