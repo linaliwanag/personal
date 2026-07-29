@@ -5,8 +5,20 @@
    pinned <body> to the viewport height and made *body itself* the scroll
    container instead of the page -- window.scrollY stayed 0 no matter how far
    you scrolled, scrollIntoView couldn't move the page, and iOS lost momentum
-   scrolling and the collapsing URL bar. The stage's own min-height: 100vh
-   wrapper is what actually fills the screen. */
+   scrolling and the collapsing URL bar. The stage's own min-height wrapper is
+   what actually fills the screen.
+
+   Deliberately no `overflow-x: hidden` either, for the second half of that same
+   bug. You cannot hide one axis and leave the other visible -- the spec forces
+   the other to `auto` -- so `overflow-x: hidden` here silently made the root a
+   scroll container again and put iOS back on the slow, main-thread scrolling
+   path it takes for a scrollable box. On a page carrying a 376-node preserve-3d
+   scene with ~150 box-shadows in it, that is the difference between momentum
+   scrolling and treacle.
+   Nothing needs the clip: the only things that overflow sideways are .studio-beam,
+   .studio-floor and .studio-contact-shadow, and all three are already clipped by
+   `overflow: hidden` on .studio-root / .studio-room, which is where the clip
+   belongs. Verified: document.scrollWidth == innerWidth without it. */
 html,
 body {
   margin: 0;
@@ -14,7 +26,6 @@ body {
     Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   background-color: #111;
   color: white;
-  overflow-x: hidden;
 }
 
 /* Loading animation */

@@ -96,7 +96,14 @@
   --studio-card: rgba(20, 21, 25, 0.72);
 
   position: relative;
+  /* svh, not vh: on iOS `100vh` is the *large* viewport -- the height the page
+     would have if the URL bar were retracted -- so a plain 100vh room is always
+     about a bar's worth taller than the screen it is standing in, and the page
+     scrolls a little even when there is nothing below the fold. svh is the small
+     viewport, which is what is actually visible. The vh line stays as the
+     fallback for anything without svh support. */
   min-height: 100vh;
+  min-height: 100svh;
   overflow: hidden;
   background:
     radial-gradient(120% 80% at 18% -10%, rgb(var(--studio-accent-rgb) / 0.16), transparent 58%),
@@ -176,6 +183,19 @@
 
 .studio-dust.is-still span {
   animation: none;
+}
+
+/* 22 motes means 22 permanently-composited layers, each with a glow shadow,
+   animating forever -- the compositor never gets to go idle, which on a phone is
+   a steady frame and battery cost for the whole time the page is open. They are
+   1-3px specks: on a desktop window they read as air in the light beam, and on a
+   phone they are close to invisible. Dropped on coarse pointers, where they cost
+   the most and show the least. Not a max-width query -- a small desktop window
+   still has the headroom and still shows the beam properly. */
+@media (hover: none) {
+  .studio-dust {
+    display: none;
+  }
 }
 
 @keyframes studio-mote {
@@ -1465,9 +1485,29 @@
   border-radius: 16px;
   border: 1px solid var(--studio-line);
   background: var(--studio-card);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   box-shadow: 0 26px 60px rgba(0, 0, 0, 0.5);
+}
+
+/* The frosted glass is a desktop-only luxury, and deliberately so.
+ *
+ * A backdrop-filter has to re-sample and re-blur everything behind the panel
+ * every frame the panel moves relative to it -- which, on a scrolling page, is
+ * every frame of every scroll. Behind this one sits the room's three stacked
+ * gradients and, on a narrow screen, the whole 3D scene. It is the single most
+ * expensive thing on the page during a scroll.
+ *
+ * On desktop it earns that: the panel sits beside the deck, so the blur is what
+ * keeps the scene reading as something *behind glass* rather than a card pasted
+ * on top. Once the grid goes one column the panel is full-width with nothing but
+ * flat room gradient behind it, so the blur is invisible -- it is paying the
+ * whole cost for an effect no one can see. Hence min-width rather than a
+ * max-width override: the cheap path is the default, and the expensive one is
+ * opted into only where it shows. */
+@media (min-width: 1081px) {
+  .studio-liner {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
 }
 
 .studio-liner-head {
@@ -1687,6 +1727,31 @@
    Responsive. The scene is one fixed-size drawing scaled as a unit, so the
    breakpoints only ever change --studio-scale (and, once, the stage's aspect
    and where the crate sits).
+ *
+ * THE RULE EVERY STEP BELOW HAS TO SATISFY.
+ * .studio-stage is --studio-stage-w wide as a *layout* box and is shrunk purely
+ * by scale3d, which is a transform and so changes nothing about layout. It sits
+ * in a centred flex line, so when the scaled drawing is wider than the column it
+ * does not shrink to fit or scroll -- it spills equally out of both sides, and
+ * the crate ends up hard against the left edge of the screen while the header
+ * text above it keeps the page's real padding. That reads as "the alignment is
+ * broken", and it is the only way this layout can go wrong.
+ *
+ * So each step must satisfy, at the NARROW end of its own band:
+ *     stage-w * scale  <=  column width
+ * and while the grid is one column (<= 1080px) the column is the full content
+ * width, viewport - 2 * clamp(18px, 4vw, 56px):
+ *     scale  <=  0.92 * viewport / stage-w
+ * Above 1080px the grid is two columns and the stage gets the 1.5fr of a
+ * 1.5fr/0.85fr split less the gap, which is what the 1100-1440 steps are sized
+ * against -- they are tuned tight to it deliberately, so the deck fills its
+ * column rather than floating in the middle of it.
+ *
+ * Two bands used to break this rule and both showed the crate jammed against the
+ * left edge: 781-835px ran 0.68 (762px of drawing in a 719px column) and
+ * 901-973px ran 0.8 (896px in an 829px column). The 835px and 973px steps below
+ * exist only to close them, so if you retune the neighbouring scales, re-check
+ * the arithmetic at 781px and at 901px rather than at the round numbers.
    -------------------------------------------------------------------------- */
 
 @media (max-width: 1440px) {
@@ -1717,24 +1782,54 @@
   }
 }
 
+/* Closes the 901-973px band: 0.8 needs 974px of viewport to fit its column. */
+@media (max-width: 973px) {
+  .studio-root {
+    --studio-scale: 0.72;
+  }
+}
+
 @media (max-width: 900px) {
   .studio-root {
     --studio-scale: 0.68;
   }
 }
 
+/* Closes the 781-835px band, the last stretch before the crate drops below the
+   deck: 0.68 needs 836px to fit. */
+@media (max-width: 835px) {
+  .studio-root {
+    --studio-scale: 0.63;
+  }
+}
+
 /* Phone: the crate can't sit beside the deck any more, so it goes underneath it
-   and the stage grows taller instead of wider. */
+   and the stage grows taller instead of wider.
+ *
+ * The three numbers here and the crate's `top` in crate.css are one tuning, and
+ * the gaps between the fixtures are what they control -- the fixtures themselves
+ * are a fixed size, so shrinking the stage does not shrink them, it just closes
+ * the space around them. The stage used to be 900px with the deck at 31%, which
+ * left 185px of empty stage above the deck's visual top (111 real pixels on a
+ * 440px phone) for no reason -- vertical space is the one thing a phone has none
+ * of. 830/26%/70% reclaims that from the top and bottom while holding the
+ * deck-to-crate gap at the ~48px it was, which is the one gap that has to stay:
+ * any tighter and the crate's open lid panels start to collide with the front of
+ * the plinth.
+ * If you retune these, the offsets to work in are that the deck's *visual* top
+ * sits 121px below its box top and its visual bottom 93px above its box bottom
+ * (that is the rotateX(57deg) foreshortening), and the crate's visual edges sit
+ * 9px outside its box. KEEP IN STEP with the .stage-crate rule in crate.css. */
 @media (max-width: 780px) {
   .studio-root {
     --studio-stage-w: 640px;
-    --studio-stage-h: 900px;
+    --studio-stage-h: 830px;
     --studio-scale: 0.86;
   }
 
   .studio-deck {
     left: 50%;
-    top: 31%;
+    top: 26%;
   }
 
   .studio-spec {
@@ -1769,6 +1864,16 @@
 @media (max-width: 370px) {
   .studio-root {
     --studio-scale: 0.48;
+  }
+}
+
+/* Below 350px the page padding has bottomed out at its 18px floor, so the column
+   stops growing with the viewport and 0.48 (307px of drawing) no longer fits --
+   a 320px phone was left with a 6px edge gap. 0.48 needs 343px; this covers
+   everything down to 311px. */
+@media (max-width: 350px) {
+  .studio-root {
+    --studio-scale: 0.43;
   }
 }
 

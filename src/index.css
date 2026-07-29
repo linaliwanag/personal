@@ -14,7 +14,9 @@ body {
   box-sizing: border-box;
   background-color: #111;
   color: white;
-  overflow-x: hidden;
+  /* No overflow-x: hidden -- see the long note in App.css. It forces overflow-y
+     to `auto`, which makes the root a scroll container and costs iOS its
+     threaded-scrolling fast path. The clip lives on .studio-root instead. */
 }
 
 * {

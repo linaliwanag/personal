@@ -639,16 +639,17 @@
   opacity: 0.85;
 }
 
-/* At 780px studio.css turns the stage into a tall 640x900 box and moves the
-   deck up to top 31%, putting the crate underneath it rather than beside it.
-   KEEP IN STEP with the .studio-deck rule in that breakpoint. */
+/* At 780px studio.css turns the stage into a tall 640x830 box and moves the
+   deck up to top 26%, putting the crate underneath it rather than beside it.
+   KEEP IN STEP with the .studio-deck rule in that breakpoint -- the two tops and
+   the stage height are one tuning, and studio.css carries the arithmetic. */
 @media (max-width: 780px) {
   .stage-crate {
     left: 50%;
     /* The crate is a deep box with two rows of controls under it, so its centre
        sits higher than a flat shelf's would to keep the pull button inside the
-       900px stage. */
-    top: 72%;
+       830px stage. */
+    top: 70%;
     --sw: 200px;
   }
 
@@ -659,7 +660,7 @@
 
 @media (max-width: 520px) {
   .stage-crate {
-    top: 73%;
+    top: 71%;
     --sw: 168px;
   }
 }
