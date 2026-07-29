@@ -1,9 +1,28 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!--
+    NO DOUBLE HYPHENS IN THIS FILE'S COMMENTS. XML forbids them inside a
+    comment, and an SVG that is not well formed does not decode as an image
+    however correctly it is served. This file used to name the CSS custom
+    property it mirrors, and the leading double hyphen of that name was enough
+    to make the whole icon unparseable: it returned 200 image/svg+xml, rendered
+    in the tab, and still failed in Chrome with "Download error or resource
+    isn't a valid image" wherever a real image decode was required, which is
+    what manifest.json asks for. Name the property as studio-accent-rgb, with no
+    leading hyphens, or do not name it at all.
+
+    width and height as well as viewBox, deliberately. viewBox alone leaves the
+    icon with no intrinsic size, so it decodes at the 150x150 CSS default rather
+    than at the 32x32 it is drawn for.
+
+    The label and spindle carry the house accent, Verdigris, which is
+    studio-accent-rgb in studio.css: 106 202 168, or #6ACAA8. The vinyl around
+    them stays neutral black. This file cannot read a CSS variable, so the
+    accent is hand kept in step; it had drifted to #6aa8a0, a transposition.
+    index.html (theme-color) and manifest.json carry the same hand-kept problem.
+  -->
   <circle cx="16" cy="16" r="15" fill="#333" stroke="#666" stroke-width="1"/>
   <circle cx="16" cy="16" r="12" fill="#222" stroke="#444" stroke-width="0.5"/>
   <circle cx="16" cy="16" r="9" fill="#111" stroke="#333" stroke-width="0.5"/>
-  <!-- The label and spindle carry the house accent (Verdigris,
-       --studio-accent-rgb); the vinyl around them stays neutral black. -->
-  <circle cx="16" cy="16" r="6" fill="#6aa8a0" stroke="#222" stroke-width="0.5"/>
+  <circle cx="16" cy="16" r="6" fill="#6ACAA8" stroke="#222" stroke-width="0.5"/>
   <circle cx="16" cy="16" r="2" fill="#0c1413"/>
 </svg>
