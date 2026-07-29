@@ -7,7 +7,13 @@ import React, {
   useState,
 } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlay, faPause, faEject, faStop } from "@fortawesome/free-solid-svg-icons";
+import {
+  faPlay,
+  faPause,
+  faEject,
+  faStop,
+  faChevronDown,
+} from "@fortawesome/free-solid-svg-icons";
 
 import { formatTime } from "../audio/useTurntableAudio";
 import Deck from "./Deck";
@@ -28,6 +34,44 @@ const REDUCED_FLIGHT_MS = 140;
 const prefersReducedMotion = () =>
   typeof window !== "undefined" &&
   !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+// The colour schemes the dropdown offers, house look first. `id` is written to
+// data-theme on .studio-root and is matched by a block of the same name at the
+// top of studio.css -- adding a look means adding it in both places and nowhere
+// else. "verdigris" deliberately matches no block: it is the stylesheet's own
+// default, so selecting it just leaves the base token values standing.
+const THEMES = [
+  { id: "verdigris", label: "Verdigris" },
+  { id: "studio-amber", label: "Studio amber" },
+  { id: "blue-note", label: "Blue note" },
+  { id: "after-hours", label: "After hours" },
+  { id: "rosewood", label: "Rosewood" },
+];
+
+const THEME_KEY = "studio-theme";
+
+// Both of these swallow their errors: Safari in private mode throws on
+// localStorage rather than returning null, and being unable to remember which
+// look you picked is not a reason to fail to render the room.
+const readStoredTheme = () => {
+  try {
+    const saved = window.localStorage.getItem(THEME_KEY);
+    // Validated against the list rather than trusted: a stale id left over from
+    // a renamed scheme would otherwise put an attribute on the root that no
+    // rule matches, which looks exactly like the default and is baffling.
+    return THEMES.some((t) => t.id === saved) ? saved : THEMES[0].id;
+  } catch {
+    return THEMES[0].id;
+  }
+};
+
+const storeTheme = (id) => {
+  try {
+    window.localStorage.setItem(THEME_KEY, id);
+  } catch {
+    /* see above */
+  }
+};
 
 // How high the record rides above the platter mount when it is simply sitting
 // there. Deck.jsx puts it there with an inline `translateZ(platterTopZ + 4)`,
@@ -96,6 +140,16 @@ const Stage = ({
   const [pitch, setPitch] = useState(0);
   const [rpm, setRpm] = useState(33);
   const [armUp, setArmUp] = useState(false);
+  const [theme, setTheme] = useState(readStoredTheme);
+
+  // Written only when the reader actually picks something, never on mount. If
+  // it were persisted on mount, a first visit would silently pin whoever landed
+  // here to whatever the house look happened to be that day, and changing it
+  // later would reach nobody but brand-new visitors.
+  const chooseTheme = useCallback((id) => {
+    setTheme(id);
+    storeTheme(id);
+  }, []);
 
   const reduced = useMemo(prefersReducedMotion, []);
 
@@ -284,7 +338,7 @@ const Stage = ({
   const elapsed = formatTime(audio.progress, audio.duration);
 
   return (
-    <div className="studio-root" ref={rootRef}>
+    <div className="studio-root" ref={rootRef} data-theme={theme}>
       <div className="studio-room" aria-hidden="true">
         <span className="studio-beam" />
         <span className="studio-floor" />
@@ -305,21 +359,55 @@ const Stage = ({
         </div>
       </div>
 
-      <div className="studio-shell">
-        <header className="studio-head">
-          <p className="studio-eyebrow">Listening room &middot; take one</p>
-          <h1 className="studio-name">
-            Paulina<span>Liwanag</span>
-          </h1>
-          <p className="studio-role">
-            Software engineer at LogicGate. Backend by trade, front-of-house by choice.
-          </p>
-        </header>
-
+      <main className="studio-shell">
         <div className="studio-body">
-          <div className="studio-viewport">
-            <div className="studio-stage">
-              <div className="studio-scene" ref={sceneRef}>
+          {/* The header rides in the stage's own column rather than above the
+              whole grid, so the liner panel -- which is the actual content of
+              the site -- starts at the top of the page instead of a third of
+              the way down it. Below 1080px the grid is one column and this
+              stacks back into plain document order. */}
+          <div className="studio-stage-col">
+            <header className="studio-head">
+              <div className="studio-head-top">
+                <p className="studio-eyebrow">Listening room &middot; take one</p>
+
+                {/* A native <select>: it gets keyboard support, the platform's
+                    own picker on a phone, and a correct accessible name for
+                    free, none of which a div-and-listbox reimplementation
+                    would. Only the closed state is styled -- the open menu is
+                    the OS's, which `color-scheme: dark` keeps legible. */}
+                <div className="studio-theme">
+                  <label className="studio-theme-label" htmlFor="studio-theme-select">
+                    Room
+                  </label>
+                  <span className="studio-theme-field">
+                    <select
+                      id="studio-theme-select"
+                      value={theme}
+                      onChange={(event) => chooseTheme(event.target.value)}
+                    >
+                      {THEMES.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.label}
+                        </option>
+                      ))}
+                    </select>
+                    <FontAwesomeIcon icon={faChevronDown} aria-hidden="true" />
+                  </span>
+                </div>
+              </div>
+
+              <h1 className="studio-name">
+                Paulina<span>Liwanag</span>
+              </h1>
+              <p className="studio-role">
+                Software engineer at LogicGate. Backend by trade, front-of-house by choice.
+              </p>
+            </header>
+
+            <div className="studio-viewport">
+              <div className="studio-stage">
+                <div className="studio-scene" ref={sceneRef}>
                 {/* `crate-tokens` carries --sw and the wood palette that every
                     .crate- rule resolves against; crate.css shrinks it from
                     there to fit beside the deck. */}
@@ -333,28 +421,36 @@ const Stage = ({
                   />
                 </div>
 
-                <Deck
-                  record={record}
-                  audio={audio}
-                  discRef={discRef}
-                  ejecting={ejecting}
-                  pitch={pitch}
-                  onPitch={setPitch}
-                  rpm={rpm}
-                  onRpm={setRpm}
-                  armUp={armUp}
-                  onLift={liftArm}
-                  onLower={lowerArm}
-                  onEject={ejectRecord}
-                  onInteract={setInteracting}
-                  reduced={reduced}
-                />
+                  <Deck
+                    record={record}
+                    audio={audio}
+                    discRef={discRef}
+                    ejecting={ejecting}
+                    pitch={pitch}
+                    onPitch={setPitch}
+                    rpm={rpm}
+                    onRpm={setRpm}
+                    armUp={armUp}
+                    onLift={liftArm}
+                    onLower={lowerArm}
+                    onEject={ejectRecord}
+                    onInteract={setInteracting}
+                    reduced={reduced}
+                  />
+                </div>
               </div>
             </div>
           </div>
 
-          <aside className="studio-liner">
-            <div className="studio-liner-head">
+          {/* Not an <aside>: this panel is the site -- who I am, what I've
+              built, how to reach me -- and filing the only real content of the
+              page under a complementary landmark hides it from anyone
+              navigating by landmark. */}
+          <section className="studio-liner" aria-label="Liner notes">
+            {/* Cueing a record swaps this panel out from under a reader whose
+                attention is on the crate, several hundred pixels away. The live
+                region is what tells them the title and side they just put on. */}
+            <div className="studio-liner-head" aria-live="polite">
               <span className="studio-liner-kicker">Liner notes</span>
               <h2>{record ? record.title : "Nothing cued"}</h2>
               <p className="studio-liner-track">
@@ -450,9 +546,9 @@ const Stage = ({
                 </div>
               )}
             </div>
-          </aside>
+          </section>
         </div>
-      </div>
+      </main>
     </div>
   );
 };

@@ -21,14 +21,19 @@
      hinge *and* leave room in front of it for the tipped-forward pile. */
   --bd: 360px;
 
-  --wood-lit: #7a5533;
-  --wood-mid: #573a22;
-  --wood-dark: #33210f;
+  /* The crate takes its timber and its lighting from whichever colour scheme
+     the room is in, and falls back to the walnut-and-amber original when it is
+     mounted anywhere that does not set them -- crate.css still stands up on its
+     own. See the theme surface at the top of studio.css. */
+  --wood-lit-rgb: var(--studio-wood-lit-rgb, 122 85 51);
+  --wood-dark-rgb: var(--studio-wood-dark-rgb, 51 33 15);
+  --wood-lit: rgb(var(--wood-lit-rgb));
+  --wood-dark: rgb(var(--wood-dark-rgb));
+  --amber: var(--studio-accent, #e0a24c);
+  --glow-rgb: var(--studio-glow-rgb, 255 232 200);
+
   --ink: #f2e9dc;
   --ink-dim: #b7a894;
-  --amber: #e0a24c;
-  --paper: #ece2d0;
-  --paper-ink: #2b2016;
 }
 
 /* ------------------------------------------------------------- the 3D crate */
@@ -146,7 +151,7 @@
   letter-spacing: 0.22em;
   text-transform: uppercase;
   font-weight: 600;
-  color: rgba(255, 235, 205, 0.34);
+  color: rgb(var(--glow-rgb) / 0.34);
   text-align: center;
   padding: 0 10px;
 }
@@ -218,6 +223,35 @@
   }
 }
 
+/* HIT TESTING -- the same rule as the deck's, for the same reason. See the long
+   note above `.stage-crate` in studio.css: inside a preserve-3d context an
+   element's own box is just another plane sorted against its children, so an
+   unpainted container can sit nearer the viewer than the very sleeves it holds
+   and swallow every click aimed at them.
+ *
+ * It bites here twice over. A pulled record's sleeve stays mounted as the hole
+ * it left -- inert, since it is aria-disabled and onPull returns early on the
+ * record already on the deck -- but it is still the frontmost plane over
+ * everything filed behind it, so the middle of the crate becomes a dead zone:
+ * you see the next sleeve there, you click it, and the hole eats the click.
+ * Silencing only the hole then hands the same clicks to `.crate-world`, whose
+ * own plane is in front of the leaned-back sleeves -- the dead zone moves
+ * rather than closes.
+ *
+ * So the scaffolding is click-through and the sleeves you can actually pull opt
+ * back in. `.crate-scene` deliberately keeps its events: it owns the dig drag,
+ * and anything falling past a sleeve should land on it. Keyboard is untouched
+ * throughout -- the pulled record's button stays in the tab order, so focus is
+ * never dropped mid-dig. */
+.crate-world,
+.crate-stack {
+  pointer-events: none;
+}
+
+.crate-sleeve--record:not(.is-onDeck) {
+  pointer-events: auto;
+}
+
 /* The hole a pulled record leaves. */
 .crate-slot {
   display: flex;
@@ -225,7 +259,7 @@
   justify-content: center;
   width: 100%;
   height: 100%;
-  border: 2px dashed rgba(255, 232, 200, 0.35);
+  border: 2px dashed rgb(var(--glow-rgb) / 0.35);
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.35);
   box-sizing: border-box;
@@ -235,7 +269,7 @@
   font-size: 11px;
   letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: rgba(255, 232, 200, 0.5);
+  color: rgb(var(--glow-rgb) / 0.5);
 }
 
 /* ------------------------------------------------------------ sleeve artwork
@@ -435,7 +469,7 @@
   text-align: center;
   border-radius: 10px;
   background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 232, 200, 0.12);
+  border: 1px solid rgb(var(--glow-rgb) / 0.12);
 }
 
 .crate-readout-title {
@@ -467,8 +501,8 @@
   padding: 10px 16px;
   min-height: 44px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 232, 200, 0.2);
-  background: linear-gradient(180deg, rgba(122, 85, 51, 0.55), rgba(51, 33, 15, 0.75));
+  border: 1px solid rgb(var(--glow-rgb) / 0.2);
+  background: linear-gradient(180deg, rgb(var(--wood-lit-rgb) / 0.55), rgb(var(--wood-dark-rgb) / 0.75));
   color: var(--ink);
   font: inherit;
   font-size: 0.85rem;
@@ -479,7 +513,7 @@
 
 .crate-btn:hover:not(:disabled) {
   border-color: var(--amber);
-  background: linear-gradient(180deg, rgba(150, 104, 60, 0.7), rgba(64, 41, 19, 0.85));
+  background: linear-gradient(180deg, rgb(var(--wood-lit-rgb) / 0.78), rgb(var(--wood-dark-rgb) / 0.9));
 }
 
 .crate-btn:active:not(:disabled) {
@@ -506,40 +540,9 @@
   padding: 13px 18px;
   font-size: 0.95rem;
   font-weight: 600;
-  border-color: rgba(224, 162, 76, 0.5);
-  background: linear-gradient(180deg, rgba(224, 162, 76, 0.28), rgba(120, 74, 26, 0.5));
+  border-color: rgb(var(--studio-accent-rgb, 224 162 76) / 0.5);
+  background: linear-gradient(180deg, rgb(var(--studio-accent-rgb, 224 162 76) / 0.28), rgb(var(--wood-lit-rgb) / 0.5));
 }
-
-/* Two independent guarantees that exactly one face is ever readable:
-   `backface-visibility` does it the usual way, and `visibility` does it
-   explicitly from React state. The belt-and-braces is deliberate -- these faces
-   pair `overflow: hidden` with `backface-visibility: hidden`, which WebKit is
-   known to composite into a texture whose backface test can be dropped, and the
-   failure mode (state says "notes", sleeve shows the cover) is exactly the sort
-   of desync that makes the toggle button look broken.
-   The 380ms delay is half of the 760ms turn, so the swap happens while the card
-   is edge-on and is never visible as a pop. */
-
-/* Vinyl peeking out of the open end of the sleeve. */
-
-@keyframes crate-spin {
-  from { transform: translateX(-14%) rotate(0deg); }
-  to { transform: translateX(-14%) rotate(360deg); }
-}
-
-/* ------------------------------------------------------------- liner notes
-   The back of the sleeve, and the only place the record's own `body` is
-   rendered. Printed dark-on-newsprint so it reads as a page, not as UI. */
-
-/* The content itself. Scrolls, because a sleeve back is a fixed rectangle and
-   the Projects note is genuinely long. */
-
-/* records.jsx hard-codes color:#ffffff on the two Contact icons, sized for the
-   dark Classic player. On newsprint they'd be invisible, and records.jsx is
-   shared by every variant -- so the inline colour is overridden here, in the
-   one stylesheet that needs it. */
-
-/* A native range, so keyboard seeking and touch targets come for free. */
 
 /* ------------------------------------------------------------- narrow / phone */
 

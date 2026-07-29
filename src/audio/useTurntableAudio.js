@@ -18,6 +18,14 @@ export function useTurntableAudio() {
 
   const audioRef = useRef(null);
   const fadeIntervalRef = useRef(null);
+  // True from the moment an eject begins until the next record is loaded.
+  // unload() fades over ~800ms, and the element goes on playing -- and firing
+  // ontimeupdate -- for that whole stretch. reset() lands earlier than that (the
+  // record's flight home is shorter than the fade), so without this guard a
+  // timeupdate arrives *after* the readout has been zeroed and pins the progress
+  // bar at whatever the needle was on when eject was pressed, next to a 0:00
+  // clock, until something else is cued.
+  const unloadingRef = useRef(false);
 
   const getAudio = useCallback(() => {
     if (!audioRef.current) {
@@ -25,6 +33,7 @@ export function useTurntableAudio() {
       audio.preload = "auto";
       audio.onloadedmetadata = () => setDuration(audio.duration || 0);
       audio.ontimeupdate = () => {
+        if (unloadingRef.current) return;
         if (audio.duration) setProgress((audio.currentTime / audio.duration) * 100);
       };
       audio.onended = () => {
@@ -75,6 +84,7 @@ export function useTurntableAudio() {
     const audio = getAudio();
 
     const begin = () => {
+      unloadingRef.current = false;
       audio.src = window.location.origin + record.file;
       audio.volume = 0;
       setProgress(0);
@@ -135,11 +145,15 @@ export function useTurntableAudio() {
   const unload = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
+    unloadingRef.current = true;
     fadeOut(audio, 0.1, () => {
       audio.pause();
       audio.removeAttribute("src");
       audio.load();
       setIsPlaying(false);
+      // The needle is off the record now, whatever order this landed in
+      // relative to reset().
+      setProgress(0);
     });
   }, []);
 

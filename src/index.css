@@ -1,5 +1,7 @@
-/* Import modern fonts */
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+/* Poppins is requested once, from the <link> in index.html, which sits behind a
+   preconnect and is discoverable by the preload scanner. An @import here would
+   ask for the same file a second time -- and later, because the browser cannot
+   see it until this stylesheet itself has arrived and parsed. */
 
 body {
   margin: 0;
@@ -34,4 +36,14 @@ code {
 /* Smooth scrolling */
 html {
   scroll-behavior: smooth;
+}
+
+/* Smooth scrolling is motion too, and it is the one kind a reader cannot opt out
+   of by not touching anything -- any in-page jump animates the whole viewport.
+   The stage already honours this query for the flights, the spin and the
+   parallax; this is the last thing that ignored it. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }

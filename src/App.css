@@ -1,5 +1,5 @@
 /* Global reset and base styles. Anything that belongs to the look itself lives
-   in the stage's own stylesheet (studio.css / crate.css / studiocrate.css).
+   in the stage's own stylesheets (studio.css / crate.css).
 
    Deliberately no `height: 100%` here. Combined with overflow-x: hidden it
    pinned <body> to the viewport height and made *body itself* the scroll
