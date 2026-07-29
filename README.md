@@ -17,8 +17,6 @@ about me, what I've built, and how to reach me.
   The arm lifts when you pick it up and the sound stops with it, like a real one.
 - **Pull the platter off speed** — the pitch fader works, and the strobe dots
   around the rim start drifting the moment it leaves 0.0%.
-- **Re-light the room** — five colour schemes in the *Room* dropdown. Verdigris
-  is the house look.
 
 Everything has a keyboard and touch equivalent, and the whole scene stops moving
 under `prefers-reduced-motion`.
@@ -69,7 +67,7 @@ src/
     ├── Sleeve.jsx             sleeve artwork
     ├── deckGeometry.js        deck measurements, and the pointer→plinth projection
     ├── dig.js                 where each sleeve sits for a given scroll position
-    ├── studio.css             the deck, the room, and the colour schemes
+    ├── studio.css             the deck, the room, and the colour it's lit in
     └── crate.css              the crate
 ```
 

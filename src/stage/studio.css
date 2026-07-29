@@ -35,14 +35,17 @@
   --studio-stage-h: 620px;
   --studio-scale: 0.78;
 
-  /* --- the theme surface --------------------------------------------------
-     Everything a colour scheme is allowed to move, and nothing else. The four
-     light channels are stored as bare `r g b` triples rather than colours,
-     because almost every use of them downstream wants its own alpha --
-     rgb(var(--studio-accent-rgb) / 0.22) -- and a var holding `rgba(...)`
-     cannot be re-alpha'd at the point of use.
+  /* --- how the room is lit -------------------------------------------------
+     Verdigris: aged brass against oxidised copper. These four are the whole
+     colour identity of the site -- change them and every lit surface, from the
+     strobe band to the crate's stencil, follows.
 
-     The division of labour matters if you add a scheme:
+     They are bare `r g b` triples rather than colours because almost every use
+     of them downstream wants its own alpha -- rgb(var(--studio-accent-rgb) /
+     0.22) -- and a var holding `rgba(...)` cannot be re-alpha'd at the point of
+     use. Reach for the triple, not a new literal.
+
+     The division of labour is worth keeping if you ever re-light the room:
        accent      the key light itself. Lit controls, the strobe band, the
                    progress meter, every focus ring.
        accent-hot  the same light at its brightest. Only for things that are
@@ -55,13 +58,13 @@
                    the room reading as a single flat wash, so it should stay
                    roughly complementary to accent rather than matching it.
 
-     The deck's own brushed aluminium is deliberately NOT themed. It is a grey
+     The deck's own brushed aluminium is deliberately NOT tinted. It is a grey
      object being lit, and it reads as metal precisely because its specular
-     highlights come from the room rather than from its own colour. */
-  /* These are Verdigris, the house look: aged brass against oxidised copper.
-     It lives in the base block rather than in a [data-theme] one so that it is
-     what you get with no attribute set and no preference stored -- see the
-     note on THEMES in index.jsx. */
+     highlights come from the room rather than from its own colour.
+
+     The accent is additionally hard-coded in index.html (theme-color),
+     public/manifest.json and public/favicon.svg. Those three cannot read a CSS
+     var and need changing by hand. */
   --studio-accent-rgb: 106 202 168;
   --studio-accent-hot-rgb: 168 240 214;
   --studio-glow-rgb: 200 240 224;
@@ -110,80 +113,6 @@
      colour stops of a gradient, so the room snaps to the new scheme however
      long a duration is declared here. The controls, borders and glows that
      already ease their own colours carry enough of the change. */
-}
-
-/* --------------------------------------------------------------------------
-   Colour schemes
-
-   Each one re-lights the same room: a key light, the bounce opposite it, the
-   three greys of the far wall, and the timber of the crate. Nothing here
-   touches geometry, and nothing here is referenced by JS beyond the string in
-   the `data-theme` attribute -- the list the dropdown renders lives in
-   THEMES in index.jsx, and the two have to agree.
-
-   Verdigris is absent on purpose: it is the house look and lives in the base
-   .studio-root block above, so selecting it clears the attribute's effect
-   rather than overriding anything.
-   -------------------------------------------------------------------------- */
-
-/* The original: a warm tungsten key light over walnut. */
-.studio-root[data-theme="studio-amber"] {
-  --studio-accent-rgb: 240 178 90;
-  --studio-accent-hot-rgb: 255 208 138;
-  --studio-glow-rgb: 255 226 180;
-  --studio-fill-rgb: 84 116 168;
-
-  --studio-room-top: #14151a;
-  --studio-room-mid: #101116;
-  --studio-room-bot: #08090c;
-
-  --studio-wood-lit-rgb: 122 85 51;
-  --studio-wood-dark-rgb: 51 33 15;
-}
-
-/* Cold and clean, lit like a mastering suite rather than a listening room. */
-.studio-root[data-theme="blue-note"] {
-  --studio-accent-rgb: 122 178 232;
-  --studio-accent-hot-rgb: 186 222 255;
-  --studio-glow-rgb: 206 228 255;
-  --studio-fill-rgb: 168 132 96;
-
-  --studio-room-top: #13161d;
-  --studio-room-mid: #0e1117;
-  --studio-room-bot: #06080c;
-
-  --studio-wood-lit-rgb: 76 90 107;
-  --studio-wood-dark-rgb: 28 36 46;
-}
-
-/* The club at 2am: a magenta wash off the back wall, everything else sunk. */
-.studio-root[data-theme="after-hours"] {
-  --studio-accent-rgb: 226 108 186;
-  --studio-accent-hot-rgb: 255 176 226;
-  --studio-glow-rgb: 246 202 236;
-  --studio-fill-rgb: 96 108 208;
-
-  --studio-room-top: #17121c;
-  --studio-room-mid: #120e17;
-  --studio-room-bot: #08060b;
-
-  --studio-wood-lit-rgb: 95 58 90;
-  --studio-wood-dark-rgb: 39 20 48;
-}
-
-/* Rosewood and a low tungsten lamp: the darkest room, the reddest light. */
-.studio-root[data-theme="rosewood"] {
-  --studio-accent-rgb: 232 128 110;
-  --studio-accent-hot-rgb: 255 186 168;
-  --studio-glow-rgb: 250 212 200;
-  --studio-fill-rgb: 108 128 176;
-
-  --studio-room-top: #1a1315;
-  --studio-room-mid: #140e10;
-  --studio-room-bot: #090607;
-
-  --studio-wood-lit-rgb: 120 64 58;
-  --studio-wood-dark-rgb: 46 21 18;
 }
 
 /* --------------------------------------------------------------------------
@@ -282,90 +211,13 @@
   margin: 0 0 clamp(18px, 3vh, 34px);
 }
 
-/* Eyebrow left, colour-scheme picker right, on one line. It wraps rather than
-   crushes: on a narrow phone the picker drops onto its own row instead of
-   squeezing the kicker to two words. */
-.studio-head-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 10px 18px;
-  margin: 0 0 10px;
-}
-
 .studio-eyebrow {
-  margin: 0;
+  margin: 0 0 10px;
   font-size: 0.66rem;
   letter-spacing: 0.34em;
   text-transform: uppercase;
   color: var(--studio-accent);
   opacity: 0.85;
-}
-
-/* --- colour-scheme picker ------------------------------------------------ */
-
-/* Pushed to the right of whichever row it lands on. On a wide screen that is
-   the same row as the kicker; once the two no longer fit, the picker wraps to
-   its own line and this keeps it anchored to the corner rather than leaving it
-   stranded mid-header above the name. */
-.studio-theme {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  margin-left: auto;
-}
-
-.studio-theme-label {
-  font-size: 0.56rem;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
-  color: var(--studio-faint);
-}
-
-.studio-theme-field {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  color: var(--studio-dim);
-}
-
-/* The chevron is decoration over the control, so it must never take the click
-   that was aimed at the select underneath it. */
-.studio-theme-field svg {
-  position: absolute;
-  right: 11px;
-  width: 9px;
-  height: 9px;
-  pointer-events: none;
-}
-
-.studio-theme select {
-  appearance: none;
-  -webkit-appearance: none;
-  min-height: 34px;
-  padding: 0 30px 0 12px;
-  border-radius: 8px;
-  border: 1px solid var(--studio-line);
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.78rem;
-  color: var(--studio-ink);
-  background: rgba(20, 21, 25, 0.8);
-  /* Hands the native popup to the platform's dark styling. Without it the
-     option list renders black-on-white in most browsers, which is a jarring
-     flash of daylight out of a very dark page. */
-  color-scheme: dark;
-  transition: border-color 0.18s ease, background 0.18s ease;
-}
-
-.studio-theme select:hover {
-  border-color: rgb(var(--studio-accent-rgb) / 0.5);
-}
-
-.studio-theme select:focus-visible {
-  outline: 2px solid var(--studio-accent);
-  outline-offset: 2px;
 }
 
 .studio-name {
@@ -1935,11 +1787,6 @@
   .studio-headshell:hover,
   .studio-fader-knob:hover {
     transform: none;
-  }
-
-  /* Same 44px floor the crate's buttons take on a touch screen. */
-  .studio-theme select {
-    min-height: 44px;
   }
 }
 

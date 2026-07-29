@@ -21,10 +21,10 @@
      hinge *and* leave room in front of it for the tipped-forward pile. */
   --bd: 360px;
 
-  /* The crate takes its timber and its lighting from whichever colour scheme
-     the room is in, and falls back to the walnut-and-amber original when it is
-     mounted anywhere that does not set them -- crate.css still stands up on its
-     own. See the theme surface at the top of studio.css. */
+  /* The crate takes its timber and its lighting from the room it stands in,
+     and falls back to the walnut-and-amber original when it is mounted
+     anywhere that does not set them -- crate.css still stands up on its own.
+     See the lighting tokens at the top of studio.css. */
   --wood-lit-rgb: var(--studio-wood-lit-rgb, 122 85 51);
   --wood-dark-rgb: var(--studio-wood-dark-rgb, 51 33 15);
   --wood-lit: rgb(var(--wood-lit-rgb));
