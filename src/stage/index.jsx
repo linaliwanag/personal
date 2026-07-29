@@ -12,7 +12,7 @@ import { faPlay, faPause, faEject, faStop } from "@fortawesome/free-solid-svg-ic
 import { formatTime } from "../audio/useTurntableAudio";
 import Deck from "./Deck";
 import CrateBox from "./CrateBox";
-import { PITCH_RANGE } from "./deckGeometry";
+import { platterRate } from "./deckGeometry";
 import "./studio.css";
 import "./crate.css";
 
@@ -67,9 +67,11 @@ const ON_PLATTER = `translate3d(0px, 0px, ${DISC_REST_Z}px) rotateZ(0deg) scale(
 //   onEjectStart     () => void. Fades audio out and releases the source. Call
 //                    the moment eject begins, so sound stops with the gesture
 //                    while the record is still flying home.
-//   audio            { isPlaying, progress, duration, toggle, stop, seek }.
-//                    progress is 0-100, duration seconds, seek(f) takes 0-1.
-//                    Loading is App's job -- never call load() from here.
+//   audio            { isPlaying, progress, duration, toggle, stop, seek,
+//                    setRate }. progress is 0-100, duration seconds, seek(f)
+//                    takes 0-1, setRate(r) takes a multiple of 33 1/3 rpm and
+//                    glides to it. Loading is App's job -- never call load()
+//                    from here.
 //   isCoarsePointer  true on touch. Resolved once at module load.
 const Stage = ({
   records,
@@ -186,6 +188,20 @@ const Stage = ({
     if (resumeRef.current && !audio.isPlaying) audio.toggle();
     resumeRef.current = false;
   }, [audio]);
+
+  // --- platter speed ---------------------------------------------------------
+
+  // The two speed controls were, until now, only ever a picture: they set the
+  // disc's rotation period and the strobe's drift and stopped there. This is
+  // the line that makes them audible.
+  //
+  // Destructured rather than depending on `audio`, which is a fresh object on
+  // every progress tick -- four times a second through a whole side. `setRate`
+  // is stable, so this fires when the controls move and at no other time.
+  const { setRate } = audio;
+  useEffect(() => {
+    setRate(platterRate(rpm, pitch));
+  }, [setRate, rpm, pitch]);
 
   // --- scene parallax --------------------------------------------------------
 
@@ -458,8 +474,10 @@ const Stage = ({
                   </p>
                   <p>
                     The arm is live &mdash; grab the headshell and swing it across the record to
-                    scrub. The fader pulls the platter off speed, and the strobe dots around the
-                    rim drift the moment it leaves 0.0.
+                    scrub. The fader pulls the platter off speed and takes the pitch of the
+                    record with it, the way a real one does; the strobe dots around the rim
+                    drift the moment it leaves 0.0. The 33 and 45 keys do the same thing, far
+                    less politely.
                   </p>
                 </div>
               )}

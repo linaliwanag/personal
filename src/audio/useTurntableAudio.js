@@ -10,6 +10,33 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 // user gestures at it, and that permission then sticks for the session -- so
 // reusing the element is what makes later, deferred plays (the one behind a
 // cross-fade, say) work at all.
+
+// Fraction of the remaining gap closed each frame while the platter changes
+// speed. A fader nudge lands inside two frames and reads as instant; a jump
+// from 33 to 45 takes about 200ms and sounds like a platter spinning up, which
+// is what it is. One code path serves both -- the difference is only ever how
+// far it has to travel.
+const RATE_GLIDE = 0.22;
+
+// Both properties, deliberately. The media element load algorithm resets
+// playbackRate to defaultPlaybackRate on every new src, so a deck left at +6%
+// would snap back to dead-on the moment the next record was cued -- fader still
+// sitting up at +6, strobe still drifting, sound suddenly disagreeing with both.
+// Setting the default is what makes speed a property of the deck rather than of
+// the track.
+//
+// preservesPitch has to be false or the fader is the wrong instrument entirely:
+// the default time-stretches, changing tempo while holding pitch, and a
+// turntable cannot do that. Speed and pitch move together on vinyl. The two
+// prefixed spellings are for Safari and Firefox before they unprefixed it.
+const applyRate = (el, rate) => {
+  el.preservesPitch = false;
+  el.webkitPreservesPitch = false;
+  el.mozPreservesPitch = false;
+  el.defaultPlaybackRate = rate;
+  el.playbackRate = rate;
+};
+
 export function useTurntableAudio() {
   const [isPlaying, setIsPlaying] = useState(false);
   // 0-100, so a variant can drive a bar with it directly.
@@ -18,6 +45,13 @@ export function useTurntableAudio() {
 
   const audioRef = useRef(null);
   const fadeIntervalRef = useRef(null);
+  // Deliberately refs and not state. The rate changes every frame of a glide and
+  // on every pointermove of a fader drag; as state it would re-render the whole
+  // deck -- 376 nodes of preserve-3d -- for a number nothing renders. The
+  // controls already own the values this is derived from.
+  const rateRef = useRef(1);       // what the element is set to right now
+  const rateTargetRef = useRef(1); // where it is heading
+  const rateRafRef = useRef(0);
   // True from the moment an eject begins until the next record is loaded.
   // unload() fades over ~800ms, and the element goes on playing -- and firing
   // ontimeupdate -- for that whole stretch. reset() lands earlier than that (the
@@ -40,9 +74,44 @@ export function useTurntableAudio() {
         setIsPlaying(false);
         setProgress(0);
       };
+      // The deck may well have been set off 33 1/3 before anything was ever
+      // cued -- the fader and the speed keys work with an empty platter.
+      applyRate(audio, rateRef.current);
       audioRef.current = audio;
     }
     return audioRef.current;
+  }, []);
+
+  // Target speed as a multiple of 33 1/3: 1 is dead-on, 1.35 is the 45 key,
+  // and the fader is the +/-8% either side of whichever of those is selected.
+  // Called from the controls on every change; cheap to call with a value it is
+  // already at.
+  const setRate = useCallback((target) => {
+    if (!Number.isFinite(target) || target <= 0) return;
+    rateTargetRef.current = target;
+
+    const el = audioRef.current;
+    if (!el) {
+      // Nothing to drive yet. getAudio() will apply this when the element is
+      // built, so the first record cued already arrives at the right speed.
+      rateRef.current = target;
+      return;
+    }
+    if (rateRafRef.current) return; // a glide is running; it reads the target
+    if (Math.abs(target - rateRef.current) < 0.0005) return;
+
+    const step = () => {
+      const delta = rateTargetRef.current - rateRef.current;
+      if (Math.abs(delta) < 0.0005) {
+        rateRef.current = rateTargetRef.current;
+        rateRafRef.current = 0;
+      } else {
+        rateRef.current += delta * RATE_GLIDE;
+        rateRafRef.current = requestAnimationFrame(step);
+      }
+      applyRate(el, rateRef.current);
+    };
+    rateRafRef.current = requestAnimationFrame(step);
   }, []);
 
   const fadeIn = (el, step) => {
@@ -87,6 +156,10 @@ export function useTurntableAudio() {
       unloadingRef.current = false;
       audio.src = window.location.origin + record.file;
       audio.volume = 0;
+      // Belt and braces over defaultPlaybackRate: the load this src kicks off
+      // is what resets playbackRate, and re-asserting it here means the record
+      // is never audible for even a frame at a speed the deck is not set to.
+      applyRate(audio, rateRef.current);
       setProgress(0);
       audio
         .play()
@@ -176,6 +249,7 @@ export function useTurntableAudio() {
 
   useEffect(() => () => {
     if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
+    if (rateRafRef.current) cancelAnimationFrame(rateRafRef.current);
     audioRef.current?.pause();
   }, []);
 
@@ -183,8 +257,8 @@ export function useTurntableAudio() {
   // does. Every variant receives this as a single prop, and a fresh object on
   // each render would invalidate their memoised callbacks for nothing.
   return useMemo(
-    () => ({ isPlaying, progress, duration, load, toggle, stop, unload, reset, seek }),
-    [isPlaying, progress, duration, load, toggle, stop, unload, reset, seek]
+    () => ({ isPlaying, progress, duration, load, toggle, stop, unload, reset, seek, setRate }),
+    [isPlaying, progress, duration, load, toggle, stop, unload, reset, seek, setRate]
   );
 }
 

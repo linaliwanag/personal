@@ -15,6 +15,8 @@ import {
   RUNOUT_ANGLE,
   FADER,
   PITCH_RANGE,
+  REV_SECONDS_AT_BASE,
+  platterRate,
   angleForFraction,
   fractionForAngle,
   clamp,
@@ -264,7 +266,10 @@ const Deck = ({
   // ---- platter motion ------------------------------------------------------
 
   const spinning = isPlaying && !ejecting && !armUp;
-  const spinSeconds = (rpm === 45 ? 60 / 45 : 60 / (100 / 3)) / (1 + pitch / 100);
+  // Same platterRate the audio engine is running at, turned into a revolution
+  // period. Reading both off one function is what keeps the disc's rotation
+  // honest about the sound now that the speed controls are audible.
+  const spinSeconds = REV_SECONDS_AT_BASE / platterRate(rpm, pitch);
   const strobeLocked = Math.abs(pitch) < 0.06;
 
   const platterSlices = useMemo(

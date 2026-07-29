@@ -21,6 +21,26 @@ export const PARK_ANGLE = 108; // arm sitting on its rest, clear of the record
 export const FADER = { x: 512, y0: 236, y1: 376 };
 export const PITCH_RANGE = 8; // percent, each way
 
+// Everything in the crate is cut at 33 1/3, so that is the speed at which a
+// side plays back at the pitch it was recorded at. Selecting 45 does not re-cut
+// the record -- it turns the platter 1.35x faster and drags the sound up with
+// it, which is the entire reason the switch is worth having on screen.
+export const BASE_RPM = 100 / 3;
+export const REV_SECONDS_AT_BASE = 60 / BASE_RPM; // 1.8s per revolution
+
+// How fast the platter is actually turning, as a multiple of 33 1/3. Both the
+// picture and the sound are derived from this one number -- Deck.jsx divides it
+// into a revolution period, useTurntableAudio feeds it to playbackRate -- so
+// the disc on screen cannot drift out of step with what is in the speakers.
+//
+// `rpm` is the selector position, and 33 there is a *label*. Taking it at face
+// value and dividing gives 33 / 33.333 = 0.99, which leaves the deck a
+// permanent 1% flat at the setting that is supposed to be dead-on -- and the
+// strobe, which locks on pitch alone, sits there insisting it is not. Map the
+// two positions explicitly instead of doing arithmetic on the caption.
+export const platterRate = (rpm, pitch) =>
+  ((rpm === 45 ? 45 : BASE_RPM) / BASE_RPM) * (1 + pitch / 100);
+
 const DEG = 180 / Math.PI;
 const PIVOT_TO_SPINDLE = Math.hypot(PLATTER.x - PIVOT.x, PLATTER.y - PIVOT.y);
 const BASE_ANGLE = Math.atan2(PLATTER.y - PIVOT.y, PLATTER.x - PIVOT.x) * DEG;
